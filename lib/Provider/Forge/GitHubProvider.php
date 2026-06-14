@@ -140,6 +140,16 @@ final class GitHubProvider implements IRepoProvider {
 		return $this->request($repo, $url, false, 'application/vnd.github.diff');
 	}
 
+	public function getRangeDiff(RepoDescriptor $repo, string $baseRef, string $headRef): string {
+		$base = $this->assertRef($baseRef);
+		$head = $this->assertRef($headRef);
+		// The compare endpoint with the .diff media type returns a ready-made
+		// unified diff between the two refs (GitHub uses base...head syntax).
+		$url = self::API . '/repos/' . $this->slug($repo) . '/compare/'
+			. rawurlencode($base) . '...' . rawurlencode($head);
+		return $this->request($repo, $url, false, 'application/vnd.github.diff');
+	}
+
 	public function blame(RepoDescriptor $repo, string $ref, string $path): array {
 		// GitHub exposes blame only via GraphQL; the REST seam used here has no
 		// blame endpoint, so this backend reports "no blame" (the UI degrades

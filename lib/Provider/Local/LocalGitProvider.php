@@ -302,6 +302,22 @@ final class LocalGitProvider implements IRepoProvider {
 		return $res->stdout;
 	}
 
+	public function getRangeDiff(RepoDescriptor $repo, string $baseRef, string $headRef): string {
+		$baseRef = $this->validator->assertRef($baseRef);
+		$headRef = $this->validator->assertRef($headRef);
+		// `git diff <base> <head>` (two validated refs, NOT a "a..b" range string
+		// — RefValidator forbids those). --no-ext-diff explicitly disables any
+		// external diff driver (defense in depth atop GitBinary's
+		// `-c diff.external=`); see §9.6. --no-color for clean text.
+		$res = $this->git->run($repo->path, [
+			'diff', '--no-ext-diff', '--no-color', $baseRef, $headRef,
+		]);
+		if (!$res->ok()) {
+			throw new RepoNotFoundException('Could not produce diff: ' . $res->stderr);
+		}
+		return $res->stdout;
+	}
+
 	public function blame(RepoDescriptor $repo, string $ref, string $path): array {
 		$ref = $this->validator->assertRef($ref);
 		$path = $this->validator->normalizePath($path);

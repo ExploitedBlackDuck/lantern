@@ -196,12 +196,88 @@ class RepoController extends Controller {
 		});
 	}
 
+	/**
+	 * Search every repository visible to the current user for a fixed string —
+	 * the single-pane "find this across all my repos" view. Fan-out is bounded
+	 * (forge repos hit the network and can rate-limit), and a single repo that
+	 * errors is skipped, never failing the whole search.
+	 */
+	#[NoAdminRequired]
+	public function searchAll(string $q = '', int $limit = 10): JSONResponse {
+		return $this->guard(function () use ($q, $limit): JSONResponse {
+			$q = trim($q);
+			if ($q === '') {
+				return new JSONResponse(['query' => '', 'results' => [], 'searchedRepos' => 0, 'truncated' => false]);
+			}
+			$perRepo = max(1, min($limit, 25));
+			// Bound the fan-out: forge repos each cost a network round-trip (plus
+			// one for defaultRef), so cap how many repos a single query touches.
+			$maxRepos = 30;
+
+			[$isAdmin, $groups] = $this->userContext();
+			$uid = $this->userSession->getUser()?->getUID();
+			$repos = array_values(array_filter(
+				$this->registry->all(),
+				static fn ($r) => $r->visibleTo($groups, $isAdmin),
+			));
+			if ($uid !== null) {
+				$repos = array_merge($repos, $this->userStore->listFor($uid), $this->forgeStore->listFor($uid));
+			}
+
+			$results = [];
+			$searched = 0;
+			$truncated = false;
+			foreach ($repos as $repo) {
+				if ($searched >= $maxRepos) {
+					$truncated = true;
+					break;
+				}
+				$searched++;
+				try {
+					$provider = $this->providers->forRepo($repo);
+					$ref = $provider->defaultRef($repo);
+					$matches = $provider->search($repo, $ref, $q, $perRepo);
+					if ($matches !== []) {
+						$results[] = [
+							'repo' => ['id' => $repo->id, 'name' => $repo->name, 'provider' => $repo->provider],
+							'ref' => $ref,
+							'matches' => $matches,
+						];
+					}
+				} catch (\Throwable $e) {
+					// One repo failing (rate limit, unreadable, bad token) must not
+					// sink the whole cross-repo search.
+					$this->logger->debug('lantern: cross-repo search skipped ' . $repo->id . ': ' . $e->getMessage());
+				}
+			}
+			return new JSONResponse([
+				'query' => $q,
+				'results' => $results,
+				'searchedRepos' => $searched,
+				'truncated' => $truncated,
+			]);
+		});
+	}
+
 	#[NoAdminRequired]
 	public function diff(string $repoId, string $ref): JSONResponse {
 		return $this->guard(function () use ($repoId, $ref): JSONResponse {
 			$repo = $this->resolveRepo($repoId);
 			$provider = $this->providers->forRepo($repo);
 			return new JSONResponse(['ref' => $ref, 'diff' => $provider->getCommitDiff($repo, $ref)]);
+		});
+	}
+
+	#[NoAdminRequired]
+	public function diffRange(string $repoId, string $base, string $head): JSONResponse {
+		return $this->guard(function () use ($repoId, $base, $head): JSONResponse {
+			$repo = $this->resolveRepo($repoId);
+			$provider = $this->providers->forRepo($repo);
+			return new JSONResponse([
+				'base' => $base,
+				'head' => $head,
+				'diff' => $provider->getRangeDiff($repo, $base, $head),
+			]);
 		});
 	}
 

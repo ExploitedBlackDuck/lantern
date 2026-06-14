@@ -157,6 +157,18 @@ final class GitLabProvider implements IRepoProvider {
 		return self::assembleDiff(\is_array($data) ? $data : []);
 	}
 
+	public function getRangeDiff(RepoDescriptor $repo, string $baseRef, string $headRef): string {
+		$base = $this->assertRef($baseRef);
+		$head = $this->assertRef($headRef);
+		// The compare endpoint returns {diffs: [...]}; reuse the same per-file
+		// assembly as a single-commit diff.
+		$url = '/projects/' . $this->projectId($repo) . '/repository/compare?from='
+			. rawurlencode($base) . '&to=' . rawurlencode($head);
+		$data = $this->get($repo, $url);
+		$diffs = (\is_array($data) && isset($data['diffs']) && \is_array($data['diffs'])) ? $data['diffs'] : [];
+		return self::assembleDiff($diffs);
+	}
+
 	public function blame(RepoDescriptor $repo, string $ref, string $path): array {
 		$ref = $this->assertRef($ref);
 		$path = $this->normalizePath($path);

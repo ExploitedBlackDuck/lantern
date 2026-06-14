@@ -166,6 +166,15 @@ $check("GET commit diff -> 200 + list", $st === 200 && \is_array($diff) && array
 $ad = GL::assembleDiff(\is_array($diff) ? $diff : []);
 $check("assembleDiff builds a git-style patch", $ad === '' || str_contains($ad, 'diff --git'));
 
+// 7b. compare (commit-range diff) -> assembleDiff
+if (\count($mc) >= 2) {
+	[$st, $cmp] = $api("/projects/$pid/repository/compare?from=" . rawurlencode($mc[1]->hash) . "&to=" . rawurlencode($mc[0]->hash));
+	$diffs = (\is_array($cmp) && isset($cmp['diffs']) && \is_array($cmp['diffs'])) ? $cmp['diffs'] : null;
+	$check("GET repository/compare -> 200 + diffs[]", $st === 200 && $diffs !== null);
+	$rd = GL::assembleDiff($diffs ?? []);
+	$check("compare assembleDiff builds a git patch", $rd === '' || str_contains($rd, 'diff --git'));
+}
+
 // 8. blame -> mapBlame
 [$st, $blame] = $api("/projects/$pid/repository/files/" . rawurlencode($file) . "/blame?ref=" . rawurlencode($ref));
 $check("GET file blame -> 200 + list", $st === 200 && \is_array($blame) && array_is_list($blame));

@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.2.0 — Commit-range diffs + cross-repo search (2026-06-14)
+
+Roadmap §1 Tier 2 — finishing features that already half-existed, across all
+three providers behind the `IRepoProvider` seam.
+
+- **Commit-range diffs.** History view gained a compare mode: pick one commit's
+  “compare”, then another, to see the diff between them (not just a single
+  commit). Implemented as `getRangeDiff()` on the interface and all backends —
+  local (`git diff --no-ext-diff`), GitHub (compare endpoint, `.diff` media
+  type), GitLab (compare endpoint, reusing the diff assembler). Commits are
+  ordered older→newer so additions read as `+`.
+- **Cross-repo search.** A new “Search all repositories” box runs one query
+  across every repo you can see and groups the hits by repo, each clickable
+  straight to the file + line. New `GET /api/search` endpoint with bounded
+  fan-out (caps repos-per-query and matches-per-repo; a repo that errors or
+  rate-limits is skipped, never sinking the whole search; truncation is
+  surfaced, not silent).
+- **Security:** the range diff uses `git diff`, which (unlike `git show`) honors
+  a repo-controlled `diff.external` — so it runs with `--no-ext-diff` on top of
+  the existing `GitBinary` hardening. A regression test proves the malicious
+  driver does not execute while a valid diff is still produced.
+- **Tests 141 → 144** offline (range diff: cumulative changes, range-string
+  rejection, the diff.external RCE block) and **live 18 → 20** against
+  gitlab.com (the compare endpoint).
+
 ## 2.1.0 — GitLab provider (2026-06-14)
 
 A third remote forge behind the existing `IRepoProvider` seam — no controller

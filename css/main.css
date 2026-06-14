@@ -45,6 +45,23 @@
 .lantern-myrepos-actions { display: flex; gap: 6px; }
 .lantern-myrepos-status { font-size: 0.85em; color: var(--color-text-maxcontrast); margin: 2px 0 0; }
 
+/* commit-range compare (Tier 2) */
+.lantern-commit-actions { padding: 2px 0 6px; }
+.lantern-compare-base { font-size: 0.85em; color: var(--color-success, #2d7d46); font-weight: bold; }
+.lantern-compare-banner {
+	font-size: 0.9em;
+	background: var(--color-background-hover);
+	border-radius: var(--border-radius, 6px);
+	padding: 6px 10px;
+	margin: 6px 0;
+}
+.lantern-range-diff { margin: 6px 0 12px; }
+
+/* cross-repo (global) search (Tier 2) */
+.lantern-globalsearch { margin-bottom: 8px; }
+.lantern-global-group { margin-bottom: 16px; }
+.lantern-global-repo { margin: 8px 0 4px; font-size: 1em; }
+
 .lantern-emptystate-tip {
 	margin: 12px 0;
 	padding: 10px 14px;
