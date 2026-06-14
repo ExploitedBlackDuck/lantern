@@ -25,7 +25,7 @@ make release           # builds, then packages runtime-only files incl. js/
 # -> build/release/lantern.tar.gz
 ```
 
-Create the public repo at github.com/BlackDuckExploited/lantern, push the source,
+Create the public repo at github.com/ExploitedBlackDuck/lantern, push the source,
 tag a release (e.g. v1.0.6), and attach `build/release/lantern.tar.gz`.
 Users install by extracting into their `custom_apps/` and running
 `occ app:enable lantern` (and ensuring `git` is installed server-side).
@@ -69,6 +69,6 @@ info.xml is schema-validated on upload (it already passes locally).
 ## Identity note
 
 This release is authored by **Paul Ammann** under the GitHub handle
-**BlackDuckExploited**. The certificate flow ties to a GitHub account with a
+**ExploitedBlackDuck**. The certificate flow ties to a GitHub account with a
 public email, so make sure that account's profile shows a working address
 before step 2.

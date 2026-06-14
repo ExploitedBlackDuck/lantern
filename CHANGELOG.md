@@ -11,7 +11,7 @@
 
 ### Added
 - Real metadata in info.xml: author (Paul Ammann), website, bugs, repository,
-  and screenshot pointing at github.com/BlackDuckExploited/lantern.
+  and screenshot pointing at github.com/ExploitedBlackDuck/lantern.
 - Full AGPL-3.0 license text as COPYING (LICENSE now references it).
 - `make release` target: builds the frontend and packages runtime-only files
   (including built js/) into a drop-in-installable tarball.

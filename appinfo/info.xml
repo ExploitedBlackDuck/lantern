@@ -24,10 +24,10 @@ will warn you if it is missing.
 	<namespace>Lantern</namespace>
 	<category>tools</category>
 	<category>integration</category>
-	<website>https://github.com/BlackDuckExploited/lantern</website>
-	<bugs>https://github.com/BlackDuckExploited/lantern/issues</bugs>
-	<repository type="git">https://github.com/BlackDuckExploited/lantern.git</repository>
-	<screenshot>https://raw.githubusercontent.com/BlackDuckExploited/lantern/main/docs/screenshot-files.png</screenshot>
+	<website>https://github.com/ExploitedBlackDuck/lantern</website>
+	<bugs>https://github.com/ExploitedBlackDuck/lantern/issues</bugs>
+	<repository type="git">https://github.com/ExploitedBlackDuck/lantern.git</repository>
+	<screenshot>https://raw.githubusercontent.com/ExploitedBlackDuck/lantern/main/docs/screenshot-files.png</screenshot>
 	<dependencies>
 		<php min-version="8.1" min-int-size="64"/>
 		<nextcloud min-version="30" max-version="34"/>
