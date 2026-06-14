@@ -209,23 +209,6 @@ export default {
 				@select="selectRepo" />
 			<MyReposManager @changed="onReposChanged" />
 			<ForgeRepoManager @changed="onReposChanged" />
-			<RefPicker
-				v-if="activeRepo"
-				:repo="activeRepo"
-				:current-ref="ref"
-				@select="selectRef" />
-			<SearchBox
-				v-if="activeRepo"
-				@search="onSearch" />
-			<TreeBrowser
-				v-if="activeRepo"
-				:repo="activeRepo"
-				:ref-name="ref"
-				:path="path"
-				@navigate="onNavigate"
-				@open-blob="onOpenBlob"
-				@ref-resolved="onRefResolved"
-				@entries="onEntries" />
 		</aside>
 
 		<main class="lantern-main">
@@ -261,22 +244,40 @@ export default {
 			</div>
 
 			<template v-else-if="activeRepo">
-				<div class="lantern-tabs" style="margin-bottom:8px;">
-					<button :class="{ primary: view === 'tree' }" @click="showTree">Files</button>
-					<button :class="{ primary: view === 'history' }" @click="showHistory">History</button>
+				<div class="lantern-toolbar">
+					<div class="lantern-tabs">
+						<button :class="{ primary: view === 'tree' }" @click="showTree">Files</button>
+						<button :class="{ primary: view === 'history' }" @click="showHistory">History</button>
+					</div>
+					<RefPicker
+						:repo="activeRepo"
+						:current-ref="ref"
+						@select="selectRef" />
+					<SearchBox @search="onSearch" />
 				</div>
 
-				<BlobViewer
-					v-if="view === 'tree' && selectedBlobPath"
-					:repo="activeRepo"
-					:ref-name="ref"
-					:path="selectedBlobPath" />
-				<ReadmeView
-					v-else-if="view === 'tree'"
-					:repo="activeRepo"
-					:ref-name="ref"
-					:path="path"
-					:entries="entries" />
+				<template v-if="view === 'tree'">
+					<TreeBrowser
+						:repo="activeRepo"
+						:ref-name="ref"
+						:path="path"
+						:open-path="selectedBlobPath"
+						@navigate="onNavigate"
+						@open-blob="onOpenBlob"
+						@ref-resolved="onRefResolved"
+						@entries="onEntries" />
+					<BlobViewer
+						v-if="selectedBlobPath"
+						:repo="activeRepo"
+						:ref-name="ref"
+						:path="selectedBlobPath" />
+					<ReadmeView
+						v-else
+						:repo="activeRepo"
+						:ref-name="ref"
+						:path="path"
+						:entries="entries" />
+				</template>
 
 				<div v-else-if="view === 'search'" class="lantern-searchresults">
 					<div v-if="searching" class="lantern-empty">Searching…</div>

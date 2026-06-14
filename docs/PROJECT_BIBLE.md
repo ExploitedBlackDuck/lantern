@@ -2,7 +2,7 @@
 
 *A read-only git repository browser for Nextcloud.*
 
-Version of this document: **0.5** · Covers app version **2.2.0** · Revised across four review rounds plus the five-horizon 2.0 build, all live-verified on NC 34 (see §0.1 and CHANGELOG).
+Version of this document: **0.5** · Covers app version **2.2.1** · Revised across four review rounds plus the five-horizon 2.0 build, all live-verified on NC 34 (see §0.1 and CHANGELOG).
 
 ## 0.1 What changed across review rounds
 
@@ -43,7 +43,7 @@ A standing convention: anywhere this document says **[VERIFY]**, it marks a Next
 | License | AGPL-3.0-or-later (matches Nextcloud) |
 | Target server | Nextcloud 30–34 (`info.xml` min 30, max 34) |
 | Language stack | PHP 8.1+ backend, Vue 3 frontend |
-| Current release | v2.2.0 — local + Files + GitHub + GitLab; commit-range diffs + cross-repo search |
+| Current release | v2.2.1 — local + Files + GitHub + GitLab; commit-range diffs + cross-repo search; UI/IA cleanup |
 
 The name ties to the idea of *illuminating* a repository you already hold — you're not fetching anything from outside, you're shining a light on what's on your own disk.
 

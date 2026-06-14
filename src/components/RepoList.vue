@@ -16,7 +16,7 @@ export default {
 			<li v-for="repo in repos" :key="repo.id">
 				<button
 					type="button"
-					class="lantern-tree-row"
+					class="lantern-repo-item"
 					:aria-current="repo.id === activeId ? 'true' : 'false'"
 					:class="{ 'is-active': repo.id === activeId }"
 					@click="$emit('select', repo)">

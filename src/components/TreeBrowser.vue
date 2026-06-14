@@ -7,6 +7,8 @@ export default {
 		repo: { type: Object, required: true },
 		refName: { type: String, default: '' },
 		path: { type: String, default: '' },
+		// The file currently open in the main pane, so its row can be marked.
+		openPath: { type: String, default: null },
 	},
 	emits: ['navigate', 'open-blob', 'ref-resolved', 'entries'],
 	data() {
@@ -70,9 +72,22 @@ export default {
 
 <template>
 	<div class="lantern-treebrowser">
-		<nav class="lantern-breadcrumb" aria-label="Breadcrumb">
-			<button type="button" class="lantern-link" @click="$emit('navigate', '')">{{ repo.name }}</button>
-			<span v-for="c in crumbs" :key="c.path"> / <button type="button" class="lantern-link" @click="$emit('navigate', c.path)">{{ c.label }}</button></span>
+		<nav class="lantern-breadcrumb" aria-label="Path">
+			<button
+				v-if="crumbs.length"
+				type="button"
+				class="lantern-crumb-link"
+				@click="$emit('navigate', '')">{{ repo.name }}</button>
+			<span v-else class="lantern-crumb-current">{{ repo.name }}</span>
+			<template v-for="(c, i) in crumbs" :key="c.path">
+				<span class="lantern-crumb-sep" aria-hidden="true">/</span>
+				<button
+					v-if="i < crumbs.length - 1"
+					type="button"
+					class="lantern-crumb-link"
+					@click="$emit('navigate', c.path)">{{ c.label }}</button>
+				<span v-else class="lantern-crumb-current" aria-current="page">{{ c.label }}</span>
+			</template>
 		</nav>
 		<div v-if="loading" class="lantern-empty">Loading…</div>
 		<div v-else-if="error" class="lantern-empty">{{ error }}</div>
@@ -87,6 +102,8 @@ export default {
 				<button
 					type="button"
 					class="lantern-tree-row"
+					:class="{ 'is-open': entry.type === 'blob' && entry.path === openPath }"
+					:aria-current="entry.type === 'blob' && entry.path === openPath ? 'true' : 'false'"
 					@click="onClick(entry)">
 					<span class="name">{{ entry.type === 'tree' ? '📁' : '📄' }} {{ entry.name }}</span>
 					<span class="size">{{ humanSize(entry.size) }}</span>

@@ -239,6 +239,18 @@ landed on two branches with open PRs:
   is skipped, never fatal; truncation surfaced). New `GlobalSearchBox` + results
   view in `App.vue`.
 
+### 2.2.1 — UI / IA cleanup (UI_CLEANUP_SPEC)
+Presentation only. Fixed the "everything is a grey pill" problem — its root
+cause was Nextcloud's bare-`<button>` background rule
+(`button:not(.button-vue,…)`, specificity 0,1,1) beating our single-class
+resets; an `#lantern`-scoped reset now wins cleanly (no `!important`). Breadcrumb
+is true path text; the file tree renders as rows with the open file tinted +
+`aria-current`; the branch picker and in-repo search moved into a main-pane
+toolbar (sidebar keeps only global search + repo list + add buttons); the active
+repo is an unmistakable chip with `aria-current`. Browser-verified on NC 34:
+18/18, zero console errors, zero 404s. The "GitHub or GitLab" label was already
+correct (GitLab shipped in 2.1.0).
+
 ### Verification (cumulative)
 - **Offline suite: 73 → 144 assertions**, all green
   (`php tests/run-core-tests.php`) — GitHub + GitLab mappers, both error
