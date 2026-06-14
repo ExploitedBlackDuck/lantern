@@ -1,0 +1,392 @@
+#lantern {
+	display: flex;
+	height: 100%;
+	min-height: 100%;
+	/* Opaque themed surface so the Nextcloud desktop wallpaper does not bleed
+	 * through behind the content (which made muted text unreadable). Using the
+	 * theme token means this follows light/dark automatically. */
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+}
+
+.lantern-sidebar {
+	width: 280px;
+	flex: 0 0 280px;
+	border-right: 1px solid var(--color-border);
+	overflow-y: auto;
+	padding: 8px;
+	background: var(--color-main-background);
+}
+.lantern-main {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: auto;
+	padding: 12px 16px;
+	background: var(--color-main-background);
+}
+
+/* My Files repos manager (sidebar) */
+.lantern-myrepos { margin: 4px 8px 12px; }
+.lantern-myrepos-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.lantern-myrepos-row .name { flex: 1 1 auto; font-size: 0.95em; }
+.lantern-myrepos-invalid { color: var(--color-text-maxcontrast); font-size: 0.85em; }
+.lantern-myrepos-remove {
+	border: none; background: none; cursor: pointer;
+	color: var(--color-text-maxcontrast); font-size: 1.1em; line-height: 1; padding: 0 4px;
+}
+.lantern-myrepos-remove:hover { color: var(--color-error, #c82829); }
+.lantern-myrepos-toggle { display: inline-block; margin: 4px 0; font-size: 0.9em; }
+.lantern-myrepos-form { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.lantern-myrepos-form input { width: 100%; box-sizing: border-box; }
+.lantern-myrepos-actions { display: flex; gap: 6px; }
+.lantern-myrepos-status { font-size: 0.85em; color: var(--color-text-maxcontrast); margin: 2px 0 0; }
+
+.lantern-emptystate-tip {
+	margin: 12px 0;
+	padding: 10px 14px;
+	border: 1px dashed var(--color-border);
+	border-radius: var(--border-radius);
+	color: var(--color-main-text);
+	font-size: 0.95em;
+}
+
+.lantern-refpicker { margin: 8px 8px 12px; }
+.lantern-refpicker-label {
+	display: block;
+	font-size: 0.85em;
+	color: var(--color-text-maxcontrast);
+	margin-bottom: 2px;
+}
+.lantern-refpicker-select { width: 100%; box-sizing: border-box; }
+
+.lantern-searchbox { margin: 0 8px 12px; }
+.lantern-searchbox-row { display: flex; gap: 6px; }
+.lantern-searchbox-row input { flex: 1 1 auto; min-width: 0; }
+
+.lantern-search-summary { color: var(--color-text-maxcontrast); margin: 4px 0 12px; }
+.lantern-search-hit { padding: 6px 0; border-bottom: 1px solid var(--color-border); }
+.lantern-search-line { color: var(--color-text-maxcontrast); }
+.lantern-search-text {
+	display: block;
+	font-family: var(--font-face-monospace, monospace);
+	font-size: 0.85em;
+	color: var(--color-text-maxcontrast);
+	white-space: pre-wrap;
+	word-break: break-word;
+	margin-top: 2px;
+}
+
+.lantern-tree { list-style: none; margin: 0; padding: 0; }
+.lantern-tree li { margin: 0; }
+
+.lantern-breadcrumb {
+	font-family: var(--font-face, sans-serif);
+	margin-bottom: 12px;
+	color: var(--color-text-maxcontrast);
+}
+
+/* Buttons styled as links/rows — real <button>s so they are keyboard-operable. */
+.lantern-link {
+	background: none;
+	border: none;
+	padding: 0;
+	color: var(--color-primary-element, var(--color-primary));
+	cursor: pointer;
+	font: inherit;
+	text-decoration: underline;
+}
+.lantern-link:focus-visible,
+.lantern-tree-row:focus-visible {
+	outline: 2px solid var(--color-primary-element, var(--color-primary));
+	outline-offset: -2px;
+	border-radius: var(--border-radius);
+}
+
+.lantern-tree-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 4px 8px;
+	border: none;
+	background: none;
+	font: inherit;
+	color: inherit;
+	text-align: left;
+	border-radius: var(--border-radius);
+	cursor: pointer;
+}
+.lantern-tree-row:hover { background: var(--color-background-hover); }
+.lantern-tree-row.is-active { background: var(--color-primary-element-light, var(--color-background-dark)); }
+.lantern-tree-row .name { flex: 1 1 auto; }
+.lantern-tree-row .size { color: var(--color-text-maxcontrast); font-size: 90%; }
+
+.lantern-code {
+	font-family: var(--font-face-monospace, monospace);
+	font-size: 13px;
+	white-space: pre;
+	tab-size: 4;
+	overflow-x: auto;
+	color: var(--color-main-text);
+	background: var(--color-background-dark);
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius);
+	padding: 12px;
+}
+.lantern-empty, .lantern-binary {
+	color: var(--color-text-maxcontrast);
+	padding: 24px;
+	text-align: center;
+}
+
+/* Blob header: filename + actions (permalink, download) */
+.lantern-blob-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+.lantern-blob-head h3 { margin: 0; word-break: break-all; }
+.lantern-blob-actions { display: flex; gap: 14px; white-space: nowrap; }
+
+/* Line-numbered code. <ol> of <li>, each with a non-selectable line-number
+ * gutter (.ln) and the code (.lc). Built on .lantern-code for the shared
+ * monospace/border/background. */
+.lantern-codelines {
+	list-style: none;
+	margin: 0;
+	padding: 8px 0;
+	counter-reset: none;
+	white-space: normal;
+	overflow-x: auto;
+}
+.lantern-codelines li {
+	display: flex;
+	align-items: flex-start;
+	line-height: 1.5;
+}
+.lantern-codelines li.is-active-line { background: var(--color-primary-element-light, rgba(255, 221, 87, 0.25)); }
+.lantern-codelines .ln {
+	flex: 0 0 auto;
+	min-width: 3em;
+	padding: 0 12px 0 8px;
+	text-align: right;
+	color: var(--color-text-maxcontrast);
+	text-decoration: none;
+	user-select: none;
+	-webkit-user-select: none;
+}
+.lantern-codelines .ln:hover { color: var(--color-main-text); }
+.lantern-codelines .ln:focus-visible { outline: 2px solid var(--color-primary-element, var(--color-primary)); }
+.lantern-codelines .lc {
+	flex: 1 1 auto;
+	white-space: pre;
+	tab-size: 4;
+	padding-right: 12px;
+}
+
+/* Image preview */
+.lantern-image-wrap { padding: 12px 0; }
+.lantern-image {
+	max-width: 100%;
+	background: var(--color-background-dark);
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius);
+	padding: 8px;
+}
+
+/* Guided first-run / empty state — explains what Lantern is, points admins at
+ * settings, and sets expectations (no remote forges yet) so the page is never
+ * an unexplained blank. */
+.lantern-emptystate {
+	max-width: 460px;
+	margin: 48px auto;
+	padding: 0 16px;
+	text-align: center;
+	color: var(--color-main-text);
+}
+.lantern-emptystate-icon { color: var(--color-primary-element, var(--color-primary)); opacity: 0.9; }
+.lantern-emptystate-title { margin: 12px 0 8px; font-size: 1.4em; }
+.lantern-emptystate-lead { color: var(--color-text-maxcontrast); margin: 0 0 16px; line-height: 1.5; }
+.lantern-emptystate-action { margin: 16px 0 12px; font-weight: 600; }
+.lantern-emptystate-hint { color: var(--color-text-maxcontrast); }
+.lantern-emptystate-button {
+	display: inline-block;
+	padding: 8px 18px;
+	border-radius: var(--border-radius-pill, var(--border-radius));
+	background: var(--color-primary-element, var(--color-primary));
+	color: var(--color-primary-element-text, #fff);
+	text-decoration: none;
+	font-weight: 600;
+}
+.lantern-emptystate-button:hover,
+.lantern-emptystate-button:focus-visible {
+	background: var(--color-primary-element-hover, var(--color-primary-hover, var(--color-primary)));
+	outline: 2px solid var(--color-main-text);
+	outline-offset: 2px;
+}
+.lantern-emptystate-scope {
+	margin-top: 28px;
+	padding: 12px 16px;
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius);
+	background: var(--color-background-hover);
+	color: var(--color-text-maxcontrast);
+	font-size: 0.9em;
+	line-height: 1.5;
+	text-align: left;
+}
+.lantern-commit {
+	padding: 8px 0;
+	border-bottom: 1px solid var(--color-border);
+}
+.lantern-commit .subject { font-weight: 600; }
+.lantern-commit .meta { color: var(--color-text-maxcontrast); font-size: 90%; }
+.lantern-commit-toggle {
+	display: block; width: 100%; text-align: left;
+	background: none; border: none; padding: 0; cursor: pointer; color: inherit; font: inherit;
+}
+.lantern-commit-toggle:hover .subject { text-decoration: underline; }
+.lantern-commit-diffhint { margin-left: 6px; color: var(--color-primary-element, var(--color-primary)); }
+.lantern-loadmore { margin: 12px 0; }
+
+/* Unified diff */
+.lantern-diff { margin: 8px 0 4px; }
+.lantern-diff-pre { white-space: pre; overflow-x: auto; }
+.lantern-diff-pre .dl-add { color: var(--color-success, #2d7d46); }
+.lantern-diff-pre .dl-del { color: var(--color-error, #c82829); }
+.lantern-diff-pre .dl-hunk { color: var(--color-primary-element, var(--color-primary)); }
+.lantern-diff-pre .dl-meta { color: var(--color-text-maxcontrast); }
+
+/* Blame gutter */
+.lantern-codelines .blame {
+	flex: 0 0 auto;
+	width: 10em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	padding: 0 8px;
+	color: var(--color-text-maxcontrast);
+	font-size: 0.8em;
+	border-right: 1px solid var(--color-border);
+}
+.lantern-wide { width: 100%; max-width: 640px; box-sizing: border-box; }
+
+/* Rendered README (Markdown). Scoped to .lantern-readme so it doesn't restyle
+ * the rest of the app; uses theme tokens to stay native in light/dark. */
+.lantern-readme { max-width: 820px; line-height: 1.6; color: var(--color-main-text); }
+.lantern-readme h1, .lantern-readme h2 {
+	border-bottom: 1px solid var(--color-border);
+	padding-bottom: 0.3em;
+	margin-top: 1.2em;
+}
+.lantern-readme h1, .lantern-readme h2, .lantern-readme h3,
+.lantern-readme h4, .lantern-readme h5, .lantern-readme h6 { font-weight: 600; line-height: 1.25; }
+.lantern-readme p, .lantern-readme ul, .lantern-readme ol, .lantern-readme blockquote { margin: 0.6em 0; }
+.lantern-readme a { color: var(--color-primary-element, var(--color-primary)); }
+.lantern-readme code {
+	font-family: var(--font-face-monospace, monospace);
+	font-size: 0.9em;
+	background: var(--color-background-dark);
+	padding: 0.15em 0.35em;
+	border-radius: var(--border-radius);
+}
+.lantern-readme pre {
+	background: var(--color-background-dark);
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius);
+	padding: 12px;
+	overflow-x: auto;
+}
+.lantern-readme pre code { background: none; padding: 0; }
+.lantern-readme blockquote {
+	border-left: 3px solid var(--color-border);
+	padding-left: 12px;
+	color: var(--color-text-maxcontrast);
+}
+.lantern-readme table { border-collapse: collapse; }
+.lantern-readme th, .lantern-readme td { border: 1px solid var(--color-border); padding: 4px 8px; }
+.lantern-readme img { max-width: 100%; }
+.lantern-readme-plain { max-width: 820px; white-space: pre-wrap; }
+
+/* Admin repo form */
+.lantern-admin-table { border-collapse: collapse; width: 100%; max-width: 900px; margin-bottom: 8px; }
+.lantern-admin-table th {
+	text-align: left;
+	font-weight: 600;
+	padding: 4px 8px 4px 0;
+	color: var(--color-text-maxcontrast);
+	font-size: 0.9em;
+}
+.lantern-admin-table td { padding: 4px 8px 4px 0; vertical-align: top; }
+.lantern-admin-table input { width: 100%; box-sizing: border-box; }
+.lantern-admin-path { font-family: var(--font-face-monospace, monospace); }
+.lantern-admin-rowactions { white-space: nowrap; }
+.lantern-admin-remove { color: var(--color-error, #c82829); }
+.lantern-admin-norows { color: var(--color-text-maxcontrast); font-style: italic; padding: 8px 0; }
+.lantern-admin-testresult { display: inline-block; margin-top: 4px; font-size: 0.85em; }
+.lantern-admin-testresult.ok { color: var(--color-success, #2d7d46); }
+.lantern-admin-testresult.bad { color: var(--color-error, #c82829); }
+.lantern-admin-field { margin-top: 16px; }
+.lantern-admin-savestatus { margin-left: 12px; color: var(--color-text-maxcontrast); }
+
+@media (prefers-reduced-motion: reduce) {
+	* { transition: none !important; animation: none !important; }
+}
+
+/* Syntax highlighting palette.
+ * Instead of shipping a fixed (dark) highlight.js theme, map hljs token classes
+ * to Nextcloud's themable text token for structural pieces (so comments/text
+ * follow the active theme) plus a compact set of mid-tone hues chosen to stay
+ * legible on BOTH light and dark backgrounds, with a prefers-color-scheme
+ * override that brightens them in dark mode.
+ *
+ * CAVEAT: the dark variant keys off @media (prefers-color-scheme: dark), which
+ * follows the OS, whereas Nextcloud's dark mode is a per-user APP setting that
+ * can diverge from the OS. A user on NC dark theme + light OS gets the
+ * light-tuned token colors on a dark code background. This is acceptable for
+ * v1; a fully native version would key off NC's own theme selector instead.
+ * Tracked for v1.x alongside @nextcloud/vue adoption. */
+.lantern-code .hljs-comment,
+.lantern-code .hljs-quote { color: var(--color-text-maxcontrast); font-style: italic; }
+.lantern-code .hljs-keyword,
+.lantern-code .hljs-selector-tag,
+.lantern-code .hljs-literal,
+.lantern-code .hljs-section { color: #8959a8; }
+.lantern-code .hljs-string,
+.lantern-code .hljs-attr,
+.lantern-code .hljs-meta-string { color: #718c00; }
+.lantern-code .hljs-number,
+.lantern-code .hljs-symbol,
+.lantern-code .hljs-built_in,
+.lantern-code .hljs-type { color: #c18401; }
+.lantern-code .hljs-title,
+.lantern-code .hljs-name,
+.lantern-code .hljs-function .hljs-title { color: #4271ae; }
+.lantern-code .hljs-variable,
+.lantern-code .hljs-regexp,
+.lantern-code .hljs-tag { color: #c82829; }
+.lantern-code .hljs-meta { color: var(--color-text-maxcontrast); }
+.lantern-code .hljs-addition { color: #718c00; }
+.lantern-code .hljs-deletion { color: #c82829; }
+
+@media (prefers-color-scheme: dark) {
+	.lantern-code .hljs-keyword,
+	.lantern-code .hljs-selector-tag,
+	.lantern-code .hljs-literal,
+	.lantern-code .hljs-section { color: #c594c5; }
+	.lantern-code .hljs-string,
+	.lantern-code .hljs-attr,
+	.lantern-code .hljs-meta-string { color: #b5bd68; }
+	.lantern-code .hljs-number,
+	.lantern-code .hljs-symbol,
+	.lantern-code .hljs-built_in,
+	.lantern-code .hljs-type { color: #de935f; }
+	.lantern-code .hljs-title,
+	.lantern-code .hljs-name,
+	.lantern-code .hljs-function .hljs-title { color: #81a2be; }
+	.lantern-code .hljs-variable,
+	.lantern-code .hljs-regexp,
+	.lantern-code .hljs-tag { color: #cc6666; }
+}
