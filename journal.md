@@ -1,10 +1,13 @@
 # Lantern — Development Journal
 
-**As of 2026-06-14 · App version 2.0.0**
+**As of 2026-06-14 · App version 2.2.0**
 
-A running record of the 1.0.6 → 2.0.0 build: what was done, how it was verified,
+A running record of the 1.0.6 → 2.2.0 build: what was done, how it was verified,
 the local test environment, and what's left. For the durable design-of-record
 see `docs/PROJECT_BIBLE.md`; for the full change history see `CHANGELOG.md`.
+
+> **2.0.1 → 2.2.0 (post-2.0 work) is summarised in §7 at the bottom;** §§1–6
+> describe the 2.0.0 build and remain accurate except where §7 supersedes them.
 
 ---
 
@@ -24,7 +27,8 @@ One UI, three repository sources, all behind the single `IRepoProvider` seam:
 | --- | --- | --- |
 | Admin server-side repos | `Service/RepoRegistry` → `LocalGitProvider` | Admin settings form |
 | A user's own Nextcloud Files | `Service/UserRepoStore` → `LocalGitProvider` | Sidebar "Add a repo from your Files" |
-| GitHub | `Provider/Forge/GitHubProvider` + `Service/ForgeRepoStore` | Sidebar "Add a GitHub repository" |
+| GitHub | `Provider/Forge/GitHubProvider` + `Service/ForgeRepoStore` | Sidebar forge picker → GitHub |
+| GitLab (incl. self-hosted) | `Provider/Forge/GitLabProvider` + `Service/ForgeRepoStore` | Sidebar forge picker → GitLab *(2.1.0, §7)* |
 
 ---
 
@@ -89,11 +93,14 @@ dropped syntax highlighting to plain text. **curl/HTTP checks could not catch it
 A throwaway Nextcloud 34 container is the live test/verify target.
 
 - **URL:** http://localhost:8099
-- **Admin:** `admin` / `admin_pass_123`
-- **Container:** `nc-lantern` · **app installed:** `lantern 2.0.0`
-- A test fixture repo (`Test Repo` → `/srv/git/testrepo`, root-owned to exercise
-  `safe.directory`) is configured. It is *test data*, not part of the app —
-  remove it in Settings → Administration → Lantern.
+- **Admin:** `admin` / `Lantern-Verify-2026-xZ` *(reset 2.2.0; NC password
+  policy rejects weak/compromised values, hence the strong string)*
+- **Container:** `nc-lantern` · **app installed:** `lantern 2.2.0`
+- Configured *test data* repos (not part of the app; remove in Settings →
+  Administration → Lantern): `Test Repo` → `/srv/git/testrepo` (root-owned, to
+  exercise `safe.directory`), plus `Alpha` → `/srv/git/alpha` (3 commits) and
+  `Beta` → `/srv/git/beta` (2 commits), both containing the word "needle" so
+  cross-repo search has multiple repos to span.
 
 ### First-time bring-up (if the container is gone)
 ```bash
@@ -161,11 +168,92 @@ docker rm -f nc-lantern
 
 - **Screenshots** still need capturing from a browser for the README and the
   `info.xml <screenshot>` URL (the latter is required for the App Store).
-- **GitLab** provider (same pattern as GitHub) — not built.
-- **Commit-range diffs** (commit-to-commit) and **GitHub blame** (REST has none;
-  would need GraphQL) — not built; single-commit diff + local blame work.
+- ~~**GitLab** provider~~ — **built in 2.1.0 (§7).**
+- ~~**Commit-range diffs**~~ — **built in 2.2.0 (§7).** **GitHub blame** (REST
+  has none; would need GraphQL) is still unbuilt; GitLab blame *does* work
+  (its REST exposes it). Local blame works.
 - **Sharing to other NC users** with per-user permission checks beyond group
   visibility — not built (deep links + group restrictions are in).
-- **App Store**: tag `v2.0.0`, sign, and submit — owner's call (see SIGNING.md).
-- Not committed to git: this working directory is not a git repo; nothing has
-  been committed/pushed. Commit when ready.
+- **App Store**: tag, sign, and submit — owner's call (see SIGNING.md).
+- See §7 for the remaining post-2.0 follow-ups (with-token private GitLab path,
+  forge ref pagination beyond 100).
+
+---
+
+## 7. Post-2.0 work (2.0.1 → 2.2.0)
+
+Driven by `ROADMAP.md`: close the v2 hardening gate (§0), then the highest
+value-to-effort features (§1 Tier 1 GitLab, Tier 2 diffs/search). This working
+directory **is** a git repo now (the §6 "not committed" note was stale); work
+landed on two branches with open PRs:
+
+- **PR #1** `harden-v2-github-error-contract` → `add-gitlab-provider` (base
+  `main`): 2.0.1 hardening + 2.1.0 GitLab.
+- **PR #2** `tier2-diffs-search` (stacked, base `add-gitlab-provider`): 2.2.0.
+
+(`gh` isn't logged in here; pull the token from the git credential helper into
+`GH_TOKEN` for `gh` commands — see the `lantern-git-push-pr` memory.)
+
+### 2.0.1 — hardening (ROADMAP §0, "feature zero")
+- **Honest GitHub failure states.** Every non-2xx used to collapse into
+  `RepoNotFoundException`, so a rate-limit or a bad token read as "Not found."
+  Now: 429 / 403-with-quota-exhausted-or-`Retry-After` → `RateLimitException`
+  (HTTP 429, message names the reset time); 401/403 → `ForgeAuthException`
+  (502, "fix the token"); generic/transport → 502. The decision moved into the
+  **pure static `GitHubProvider::classifyStatus()`** (+ `pageFor()`) so it's
+  fixture-tested, not live-only. Mapped in `RepoController::guard()`/`raw()`.
+- **Trust-boundary regression test.** A repo-controlled malicious
+  `diff.external` is proven *real* (plain `git diff` runs it) and proven
+  *neutralised* by the `GitBinary` hardening flags (§4/§9.6 standing rule).
+- Real-repo edge coverage: detached HEAD, no-commit/unborn, single-ref.
+
+### 2.1.0 — GitLab provider (ROADMAP §1 Tier 1)
+- `Provider/Forge/GitLabProvider` (REST v4) behind the same `IRepoProvider`
+  seam — **no controller/frontend rewrite.** Tree, blob, history, branch/tag
+  picker, commit diffs, code search, **plus blame and line-numbered search**
+  (GitLab's REST exposes them; GitHub's doesn't without GraphQL).
+- **Self-hosted instances** (per-repo base URL, default gitlab.com) and
+  **nested project paths** (`group/sub/project`, URL-encoded into `:id`). PAT
+  via `PRIVATE-TOKEN`, encrypted at rest. Same error contract as GitHub.
+- `ForgeRepoStore` **generalised** to `{kind, host, slug}` with backward-
+  compatible reading of pre-2.1 GitHub rows (no migration). Add-repo UI gained
+  a GitHub/GitLab picker.
+- **Live-verified against the real gitlab.com API** via the new, network-gated
+  `tests/live-gitlab.php` (not in the offline suite). The pass found + fixed two
+  real behaviours: (1) GitLab blob-search needs auth **even for public
+  projects** (401 anon) → `search()` degrades to `[]` when tokenless;
+  (2) branch/tag lists are bounded at `per_page=100` (same as GitHub) so the
+  default can page out of the picker — `defaultRef()` is fetched independently
+  so browsing is unaffected.
+
+### 2.2.0 — commit-range diffs + cross-repo search (ROADMAP §1 Tier 2)
+- **Commit-range diffs:** `getRangeDiff()` on the interface + all three
+  backends — local `git diff --no-ext-diff` (the canonical disable of external
+  diff drivers; `git diff`, unlike `git show`, *honors* `diff.external`),
+  GitHub/GitLab compare endpoints. `CommitList` compare mode: pick one commit's
+  "⇄ compare", then another; ordered older→newer so additions read as `+`.
+  New `GET /api/repos/{id}/diff-range`.
+- **Cross-repo search:** new `GET /api/search` aggregates one query across every
+  repo the user can see, grouped by repo, each hit clickable to file+line.
+  Bounded fan-out (caps repos/query + matches/repo; a failing/rate-limited repo
+  is skipped, never fatal; truncation surfaced). New `GlobalSearchBox` + results
+  view in `App.vue`.
+
+### Verification (cumulative)
+- **Offline suite: 73 → 144 assertions**, all green
+  (`php tests/run-core-tests.php`) — GitHub + GitLab mappers, both error
+  contracts, pagination, malformed/empty responses, real-repo edges, and the
+  range-diff `diff.external` RCE block.
+- **Live gitlab.com: 20/20** (`php tests/live-gitlab.php` — network-gated).
+- **Browser (headless Chromium) on the live NC 34 container: 16/16.** Deployed
+  2.2.0, created the Alpha/Beta/test repos above, and drove both new UIs
+  end-to-end: cross-repo search returned hits from both repos and navigated to
+  file+line; History compare rendered the range diff. **Zero console errors,
+  zero page errors, zero `/apps/lantern` 4xx/5xx.** (HARD RULE 0 satisfied.)
+
+### Remaining follow-ups
+- With-token **private** GitLab project path (needs a real PAT; the NC
+  `IClientService` wiring mirrors the live-verified GitHub backend).
+- Forge **ref pagination beyond 100** branches/tags (affects both GitHub and
+  GitLab pickers).
+- GitHub blame (GraphQL), per-user sharing, App-Store submission, screenshots.
