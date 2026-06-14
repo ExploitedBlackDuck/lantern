@@ -5,7 +5,19 @@ export default {
 	name: 'ForgeRepoManager',
 	emits: ['changed'],
 	data() {
-		return { open: false, mine: [], owner: '', repo: '', token: '', name: '', status: '', busy: false }
+		return { open: false, mine: [], kind: 'github', owner: '', repo: '', project: '', host: '', token: '', name: '', status: '', busy: false }
+	},
+	computed: {
+		isGitlab() {
+			return this.kind === 'gitlab'
+		},
+		// The slug sent to the backend: owner/repo for GitHub, the project path
+		// (which may be nested groups) for GitLab.
+		slug() {
+			return this.isGitlab
+				? this.project.trim().replace(/^\/+|\/+$/g, '')
+				: `${this.owner.trim()}/${this.repo.trim()}`
+		},
 	},
 	mounted() {
 		this.refresh()
@@ -18,16 +30,19 @@ export default {
 				this.mine = []
 			}
 		},
+		forgeLabel(r) {
+			return r.kind === 'gitlab' ? 'GitLab' : 'GitHub'
+		},
 		async add() {
-			if (!this.owner.trim() || !this.repo.trim()) {
-				this.status = 'Enter both an owner and a repository name.'
+			if (this.isGitlab ? !this.project.trim() : (!this.owner.trim() || !this.repo.trim())) {
+				this.status = this.isGitlab ? 'Enter the project path (group/.../project).' : 'Enter both an owner and a repository name.'
 				return
 			}
 			this.busy = true
 			this.status = 'Adding…'
 			try {
-				await addForgeRepo(this.owner.trim(), this.repo.trim(), this.token.trim(), this.name.trim())
-				this.owner = this.repo = this.token = this.name = ''
+				await addForgeRepo(this.kind, this.slug, this.host.trim(), this.token.trim(), this.name.trim())
+				this.owner = this.repo = this.project = this.host = this.token = this.name = ''
 				this.status = ''
 				this.open = false
 				await this.refresh()
@@ -53,18 +68,33 @@ export default {
 	<div class="lantern-myrepos">
 		<ul v-if="mine.length" class="lantern-tree" role="list">
 			<li v-for="r in mine" :key="r.id" class="lantern-myrepos-row">
-				<span class="name">{{ r.name }} <span class="lantern-myrepos-invalid">({{ r.owner }}/{{ r.repo }})</span></span>
+				<span class="name">{{ r.name }} <span class="lantern-myrepos-invalid">({{ forgeLabel(r) }}: {{ r.slug }})</span></span>
 				<button type="button" class="lantern-myrepos-remove" :aria-label="'Remove ' + r.name" @click="remove(r.id)">×</button>
 			</li>
 		</ul>
 
 		<button type="button" class="lantern-link lantern-myrepos-toggle" @click="open = !open">
-			{{ open ? '− Cancel' : '+ Add a GitHub repository' }}
+			{{ open ? '− Cancel' : '+ Add a GitHub or GitLab repository' }}
 		</button>
 
 		<div v-if="open" class="lantern-myrepos-form">
-			<input v-model="owner" type="text" placeholder="owner (user or org)" aria-label="GitHub owner">
-			<input v-model="repo" type="text" placeholder="repository" aria-label="GitHub repository">
+			<label class="lantern-forge-kind">
+				<span>Forge</span>
+				<select v-model="kind" aria-label="Forge type">
+					<option value="github">GitHub</option>
+					<option value="gitlab">GitLab</option>
+				</select>
+			</label>
+
+			<template v-if="isGitlab">
+				<input v-model="host" type="text" placeholder="instance URL (blank = gitlab.com)" aria-label="GitLab instance URL">
+				<input v-model="project" type="text" placeholder="group/subgroup/project" aria-label="GitLab project path">
+			</template>
+			<template v-else>
+				<input v-model="owner" type="text" placeholder="owner (user or org)" aria-label="GitHub owner">
+				<input v-model="repo" type="text" placeholder="repository" aria-label="GitHub repository">
+			</template>
+
 			<input v-model="token" type="password" placeholder="personal access token (private repos)" aria-label="Access token" autocomplete="off">
 			<input v-model="name" type="text" placeholder="Display name (optional)" aria-label="Display name">
 			<div class="lantern-myrepos-actions">

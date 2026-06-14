@@ -10,11 +10,13 @@ Nextcloud login. Browse the file tree, read files with syntax highlighting,
 render READMEs, view history with diffs and blame, switch branches/tags, search
 in files, and preview images.
 
-Three kinds of repository, one uniform UI:
+Four kinds of repository, one uniform UI:
 - Server-side repositories an administrator configures (with optional per-group
   access restrictions).
 - Git repositories inside a user's own Nextcloud Files.
 - GitHub repositories (read-only, via a personal access token for private repos).
+- GitLab repositories, including self-hosted instances (read-only, via a
+  personal access token for private projects).
 
 Also integrates with Nextcloud unified search and the dashboard. Read-only by
 design — Lantern never modifies a repository.
@@ -23,7 +25,7 @@ Requires the git binary to be installed and runnable by the web-server user for
 server-side and Files repositories. The official Nextcloud Docker image does not
 include git; Lantern's setup check will warn you if it is missing.
 	]]></description>
-	<version>2.0.1</version>
+	<version>2.1.0</version>
 	<licence>agpl</licence>
 	<author mail="lantern@pxsec.xyz">Paul Ammann</author>
 	<namespace>Lantern</namespace>

@@ -45,13 +45,14 @@ export default {
 
 		<p class="lantern-emptystate-tip">
 			You can also add your own repositories from the sidebar — a folder in
-			<strong>your Files</strong>, or a <strong>GitHub</strong> repository.
+			<strong>your Files</strong>, or a <strong>GitHub</strong> or
+			<strong>GitLab</strong> repository.
 		</p>
 
 		<p class="lantern-emptystate-scope">
 			<strong>Good to know:</strong> Lantern can browse repositories on this
-			server (admin-configured paths or folders in your Files) and GitHub
-			repositories you connect. It is read-only and never modifies a repo.
+			server (admin-configured paths or folders in your Files) and GitHub or
+			GitLab repositories you connect. It is read-only and never modifies a repo.
 		</p>
 	</div>
 </template>

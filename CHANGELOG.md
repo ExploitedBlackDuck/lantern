@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.1.0 — GitLab provider (2026-06-14)
+
+A third remote forge behind the existing `IRepoProvider` seam — no controller
+or frontend rewrite, the architecture was built for exactly this.
+
+- **Browse GitLab repositories**, including **self-hosted instances** (each repo
+  carries its own instance base URL; defaults to gitlab.com). Projects are
+  addressed by their full, possibly-nested `group/subgroup/project` path.
+  Authentication is a personal access token (`PRIVATE-TOKEN`), stored encrypted
+  exactly like the GitHub token; public projects need none.
+- **Full read parity, and then some.** Tree, file view, history, branch/tag
+  picker, commit diffs, and code search all work. Because GitLab's REST API
+  exposes them, GitLab additionally gets **blame** and **line-numbered search**
+  results — parity the GitHub REST backend can't reach without GraphQL.
+- **Same honest error contract as GitHub** (added in 2.0.1): rate-limit (429 /
+  `RateLimit-*` headers) → an actionable "try again later" message; an invalid/
+  expired/under-scoped token → a clear auth error; generic upstream errors map
+  cleanly — never a phantom "Not found." `GitLabProvider::classifyStatus()` and
+  the JSON→model mappers are pure and unit-tested.
+- **Forge storage generalised.** `ForgeRepoStore` now records a forge `kind`,
+  instance `host`, and `slug` per repo, with backward-compatible reading of the
+  pre-2.1 GitHub rows (no migration needed). The add-repo UI gained a forge
+  picker (GitHub / GitLab).
+- **Test suite 113 → 141 assertions:** GitLab mappers (tree/blob/commits/refs/
+  search/diff-assembly/blame), the error contract, pagination, and
+  malformed/empty responses.
+- *Not yet live-verified against a real GitLab instance* — the pure mapping
+  layer is fixture-tested; the thin HTTP plumbing mirrors the live-verified
+  GitHub backend and is pending a live pass (no GitLab instance in this build).
+
 ## 2.0.1 — v2 hardening, part 1 (2026-06-14)
 
 The "feature zero" gate from `ROADMAP.md` §0: make the v2 surface as verified as

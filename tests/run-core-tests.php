@@ -421,6 +421,87 @@ $check('GH mapBlob with no content field -> truncated, no crash',
 $badB64 = $GH::mapBlob(['path' => 'p', 'size' => 4, 'encoding' => 'base64', 'content' => '!!!not base64!!!']);
 $check('GH mapBlob with undecodable base64 -> truncated', $badB64->truncated === true);
 
+// --- GitLabProvider pure mappers (fixture JSON, no network) ---
+$GL = \OCA\Lantern\Provider\Forge\GitLabProvider::class;
+
+$glTree = $GL::mapTree([
+	['id' => 'a1', 'name' => 'main.py', 'type' => 'blob', 'path' => 'main.py', 'mode' => '100644'],
+	['id' => 'b2', 'name' => 'lib', 'type' => 'tree', 'path' => 'lib', 'mode' => '040000'],
+	['id' => 'c3', 'name' => 'README.md', 'type' => 'blob', 'path' => 'README.md', 'mode' => '100644'],
+]);
+$glNames = array_map(static fn (TreeEntry $e) => $e->name, $glTree);
+$check('GL mapTree sorts dirs first', $glNames === ['lib', 'main.py', 'README.md']);
+$check('GL mapTree carries oid + null size (tree endpoint has no sizes)',
+	$glTree[0]->oid === 'b2' && $glTree[0]->size === null && $glTree[1]->size === null);
+
+$glBlob = $GL::mapBlob(['file_path' => 'a.txt', 'size' => 5, 'encoding' => 'base64', 'content' => base64_encode('hello')]);
+$check('GL mapBlob decodes base64', $glBlob->content === 'hello' && $glBlob->binary === false && $glBlob->path === 'a.txt');
+$glBlobBin = $GL::mapBlob(['file_path' => 'b.bin', 'size' => 4, 'encoding' => 'base64', 'content' => base64_encode("a\x00b\xff")]);
+$check('GL mapBlob flags binary + suppresses', $glBlobBin->binary === true && $glBlobBin->content === null);
+$glBlobBig = $GL::mapBlob(['file_path' => 'big', 'size' => 5_000_000, 'encoding' => 'base64', 'content' => 'AAAA']);
+$check('GL mapBlob marks >1MiB truncated', $glBlobBig->truncated === true && $glBlobBig->content === null);
+$glBlobNoSize = $GL::mapBlob(['file_path' => 'c.txt', 'size' => 0, 'encoding' => 'base64', 'content' => base64_encode('hi')]);
+$check('GL mapBlob falls back to decoded length when size is 0', $glBlobNoSize->size === 2 && $glBlobNoSize->content === 'hi');
+
+$glCommits = $GL::mapCommits([
+	['id' => 'deadbeef', 'title' => 'Fix bug', 'message' => "Fix bug\n\nbody", 'author_name' => 'Ann', 'author_email' => 'a@x', 'authored_date' => '2026-01-01T00:00:00Z'],
+]);
+$check('GL mapCommits maps id/title/author', $glCommits[0]->subject === 'Fix bug' && $glCommits[0]->authorName === 'Ann' && $glCommits[0]->shortHash() === 'deadbee');
+
+$glRefs = $GL::mapRefs(
+	[['name' => 'main', 'default' => true], ['name' => 'dev', 'default' => false]],
+	[['name' => 'v2.0']],
+	'main',
+);
+$check('GL mapRefs branches+tags', \count($glRefs) === 3 && $glRefs[2]->type === 'tag');
+$check('GL mapRefs flags the default branch (from the default flag)', $glRefs[0]->name === 'main' && $glRefs[0]->isDefault === true);
+
+$glSearch = $GL::mapSearch([
+	['path' => 'src/x.js', 'startline' => 12, 'data' => "  console.log('x')\nnext line"],
+	['startline' => 3, 'data' => 'no path -> dropped'],
+]);
+$check('GL mapSearch carries path + REAL line number + first snippet line',
+	\count($glSearch) === 1 && $glSearch[0]->path === 'src/x.js' && $glSearch[0]->line === 12 && str_contains($glSearch[0]->text, 'console.log'));
+
+$glDiff = $GL::assembleDiff([
+	['old_path' => 'a.txt', 'new_path' => 'a.txt', 'diff' => "@@ -1 +1 @@\n-old\n+new"],
+	['old_path' => 'gone.txt', 'new_path' => 'gone.txt', 'deleted_file' => true, 'diff' => "@@ -1 +0 @@\n-bye\n"],
+]);
+$check('GL assembleDiff builds a unified patch with git headers',
+	str_contains($glDiff, 'diff --git a/a.txt b/a.txt') && str_contains($glDiff, '+new') && str_contains($glDiff, 'deleted file'));
+$check('GL assembleDiff of [] is empty string', $GL::assembleDiff([]) === '');
+
+$glBlame = $GL::mapBlame([
+	['commit' => ['id' => str_repeat('a', 40), 'author_name' => 'Ann', 'authored_date' => '2026-01-01T00:00:00Z'], 'lines' => ['l1', 'l2']],
+	['commit' => ['id' => str_repeat('b', 40), 'author_name' => 'Bob', 'authored_date' => '2026-02-02T00:00:00Z'], 'lines' => ['l3']],
+]);
+$check('GL mapBlame flattens groups into per-line entries with running line numbers',
+	\count($glBlame) === 3 && $glBlame[0]->line === 1 && $glBlame[1]->line === 2 && $glBlame[2]->line === 3);
+$check('GL mapBlame carries author + full hash, serializes short hash',
+	$glBlame[0]->author === 'Ann' && \strlen($glBlame[0]->hash) === 40 && \strlen($glBlame[2]->jsonSerialize()['hash']) === 7 && $glBlame[2]->author === 'Bob');
+
+// GitLab error contract — same shape as GitHub but RateLimit-* headers (no x-).
+$glClassify = static fn (int $s, array $h = []) => $throwsClass(static fn () => $GL::classifyStatus($s, $h));
+$check('GL classify 200 does not throw', $glClassify(200) === '');
+$check('GL classify 401 -> ForgeAuthException', $glClassify(401) === ForgeAuthException::class);
+$check('GL classify 429 -> RateLimitException', $glClassify(429) === RateLimitException::class);
+$check('GL classify 403 + RateLimit-Remaining:0 -> RateLimitException',
+	$glClassify(403, ['RateLimit-Remaining' => '0']) === RateLimitException::class);
+$check('GL classify 403 + Retry-After -> RateLimitException',
+	$glClassify(403, ['Retry-After' => '30']) === RateLimitException::class);
+$check('GL classify 403 forbidden (no rate hdrs) -> ForgeAuthException', $glClassify(403) === ForgeAuthException::class);
+$check('GL classify 404 -> RepoNotFoundException', $glClassify(404) === RepoNotFoundException::class);
+$check('GL classify 500 -> RepoException (not RepoNotFound)', $glClassify(500) === RepoException::class);
+$check('GL pageFor offset 0 -> page 1', $GL::pageFor(0, 100) === 1);
+$check('GL pageFor offset 150 perPage 50 -> page 4', $GL::pageFor(150, 50) === 4);
+
+// Malformed/empty responses stay total.
+$check('GL mapTree of [] is []', $GL::mapTree([]) === []);
+$check('GL mapCommits of [] is []', $GL::mapCommits([]) === []);
+$check('GL mapBlame tolerates missing commit/lines', \count($GL::mapBlame([['x' => 1], ['commit' => 'nope']])) === 0);
+$glBadCommit = $GL::mapCommits([['id' => 'x'], []]);
+$check('GL mapCommits tolerates missing fields', \count($glBadCommit) === 2 && $glBadCommit[0]->subject === '');
+
 echo "\n========================================\n";
 echo "RESULT: $pass passed, $fail failed\n";
 exit($fail === 0 ? 0 : 1);

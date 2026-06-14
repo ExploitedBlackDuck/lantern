@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\Lantern\AppInfo;
 
 use OCA\Lantern\Provider\Forge\GitHubProvider;
+use OCA\Lantern\Provider\Forge\GitLabProvider;
 use OCA\Lantern\Provider\IRepoProvider;
 use OCA\Lantern\Provider\Local\GitBinary;
 use OCA\Lantern\Provider\Local\LocalGitProvider;
@@ -46,6 +47,7 @@ class Application extends App implements IBootstrap {
 			return new RepoProviderManager([
 				$c->get(LocalGitProvider::class),
 				$c->get(GitHubProvider::class),
+				$c->get(GitLabProvider::class),
 			]);
 		});
 

@@ -38,6 +38,10 @@
 .lantern-myrepos-toggle { display: inline-block; margin: 4px 0; font-size: 0.9em; }
 .lantern-myrepos-form { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .lantern-myrepos-form input { width: 100%; box-sizing: border-box; }
+.lantern-myrepos-form select { width: 100%; box-sizing: border-box; }
+.lantern-forge-kind { display: flex; align-items: center; gap: 8px; }
+.lantern-forge-kind span { color: var(--color-text-maxcontrast); }
+.lantern-forge-kind select { flex: 1; }
 .lantern-myrepos-actions { display: flex; gap: 6px; }
 .lantern-myrepos-status { font-size: 0.85em; color: var(--color-text-maxcontrast); margin: 2px 0 0; }
 

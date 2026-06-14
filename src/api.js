@@ -83,14 +83,16 @@ export async function removeMyRepo(id) {
 	return data
 }
 
-// --- the current user's remote-forge (GitHub) repos (Horizon 3) ---
+// --- the current user's remote-forge repos: GitHub (H3) + GitLab (v2.1) ---
 export async function fetchForgeRepos() {
 	const { data } = await axios.get(base('/api/forge/repos'))
 	return data.repos
 }
 
-export async function addForgeRepo(owner, repo, token, name) {
-	const { data } = await axios.post(base('/api/forge/repos/add'), { owner, repo, token, name })
+// kind: 'github' | 'gitlab'; slug: 'owner/repo' or 'group/.../project';
+// host: instance base URL ('' = the forge default).
+export async function addForgeRepo(kind, slug, host, token, name) {
+	const { data } = await axios.post(base('/api/forge/repos/add'), { kind, slug, host, token, name })
 	return data
 }
 
