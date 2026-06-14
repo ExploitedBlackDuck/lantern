@@ -1,5 +1,76 @@
 # Changelog
 
+## 2.1.0 — GitLab provider (2026-06-14)
+
+A third remote forge behind the existing `IRepoProvider` seam — no controller
+or frontend rewrite, the architecture was built for exactly this.
+
+- **Browse GitLab repositories**, including **self-hosted instances** (each repo
+  carries its own instance base URL; defaults to gitlab.com). Projects are
+  addressed by their full, possibly-nested `group/subgroup/project` path.
+  Authentication is a personal access token (`PRIVATE-TOKEN`), stored encrypted
+  exactly like the GitHub token; public projects need none.
+- **Full read parity, and then some.** Tree, file view, history, branch/tag
+  picker, commit diffs, and code search all work. Because GitLab's REST API
+  exposes them, GitLab additionally gets **blame** and **line-numbered search**
+  results — parity the GitHub REST backend can't reach without GraphQL.
+- **Same honest error contract as GitHub** (added in 2.0.1): rate-limit (429 /
+  `RateLimit-*` headers) → an actionable "try again later" message; an invalid/
+  expired/under-scoped token → a clear auth error; generic upstream errors map
+  cleanly — never a phantom "Not found." `GitLabProvider::classifyStatus()` and
+  the JSON→model mappers are pure and unit-tested.
+- **Forge storage generalised.** `ForgeRepoStore` now records a forge `kind`,
+  instance `host`, and `slug` per repo, with backward-compatible reading of the
+  pre-2.1 GitHub rows (no migration needed). The add-repo UI gained a forge
+  picker (GitHub / GitLab).
+- **Test suite 113 → 141 assertions:** GitLab mappers (tree/blob/commits/refs/
+  search/diff-assembly/blame), the error contract, pagination, and
+  malformed/empty responses.
+- **Live-verified against the real gitlab.com API** via `tests/live-gitlab.php`
+  (network-gated, not part of the offline suite): every endpoint URL and JSON
+  shape the provider uses, fed through the real mappers — 18/18 green. The pass
+  surfaced and fixed two real behaviours:
+  - GitLab's blob-search API requires authentication **even for public
+    projects** (401 anonymously). `search()` now degrades to "no results" when
+    no token is configured, instead of surfacing an auth error on an otherwise
+    anonymous browse (every other read works without a token).
+  - The branch/tag lists are bounded at `per_page=100` (same as the GitHub
+    backend); on a repo with >100 branches the default may page out of the
+    picker list. `defaultRef()` is fetched independently so browsing is
+    unaffected; full ref pagination is a possible follow-up.
+  - Still pending: the with-token private-project path and the NC
+    `IClientService` wiring (identical to the live-verified GitHub backend).
+
+## 2.0.1 — v2 hardening, part 1 (2026-06-14)
+
+The "feature zero" gate from `ROADMAP.md` §0: make the v2 surface as verified as
+v1 was, starting with the GitHub error contract and real-repo edge cases. No new
+user-facing features — correctness and tests only.
+
+- **Honest GitHub failure states.** A rate-limited response (HTTP 429, or 403
+  with the quota exhausted / a `Retry-After` header) is no longer reported to the
+  user as "Not found." It now surfaces as a distinct `RateLimitException` →
+  **HTTP 429** with an actionable message that names the reset time. An invalid,
+  expired, or under-scoped token (401/403) surfaces as `ForgeAuthException` →
+  **HTTP 502** telling the user to fix the token. Generic upstream errors (5xx,
+  transport failures) map to **502**, no longer masquerading as 404. Previously
+  every non-2xx collapsed into `RepoNotFoundException`.
+- **Testable error contract.** The status→exception decision moved into the pure
+  static `GitHubProvider::classifyStatus()`, and pagination math into
+  `pageFor()`, so both are unit-tested with fixtures instead of only live.
+- **Expanded test suite: 73 → 113 assertions.** New coverage for the GitHub
+  error contract (rate-limit/auth/not-found/generic, case-insensitive and empty
+  headers, the reset-time message), pagination edges, malformed/empty API
+  responses (mappers stay total), and real-repo edges on the local provider:
+  detached HEAD (defaultRef fallback + reads), no-commit/unborn repos
+  (defaultRef, empty refs, history-throws), and single-ref/minimal repos.
+- **Trust-boundary regression test.** A new fixture weaponises a repo's own
+  `.git/config` with a malicious `diff.external` driver and proves both that the
+  vector is real (plain `git diff` runs it) and that the `GitBinary` hardening
+  flags neutralise it — guarding the §4 standing rule for any future `git diff`
+  call. (The current show-based diff is additionally safe by command selection,
+  since `git show` ignores `diff.external` without `--ext-diff`; also asserted.)
+
 ## 2.0.0 — Horizons 0–4 (2026-06-14)
 
 A major step up from the 1.0.6 proof-of-concept, delivered as five "horizons"

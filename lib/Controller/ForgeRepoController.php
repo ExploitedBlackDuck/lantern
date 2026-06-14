@@ -34,12 +34,16 @@ class ForgeRepoController extends Controller {
 	}
 
 	#[NoAdminRequired]
-	public function addMine(string $owner = '', string $repo = '', string $token = '', string $name = ''): JSONResponse {
+	public function addMine(string $kind = 'github', string $slug = '', string $host = '', string $token = '', string $name = '', string $owner = '', string $repo = ''): JSONResponse {
 		$uid = $this->uid();
 		if ($uid === null) {
 			return new JSONResponse(['error' => 'Not signed in.'], Http::STATUS_UNAUTHORIZED);
 		}
-		$result = $this->store->addFor($uid, $owner, $repo, $token, $name);
+		// Back-compat: older clients sent owner+repo instead of a slug.
+		if ($slug === '' && $owner !== '' && $repo !== '') {
+			$slug = trim($owner) . '/' . trim($repo);
+		}
+		$result = $this->store->addFor($uid, $kind, $slug, $host, $token, $name);
 		if (!$result['ok']) {
 			return new JSONResponse(['error' => $result['reason']], Http::STATUS_BAD_REQUEST);
 		}
