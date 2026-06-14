@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace OCA\Lantern\Controller;
 
 use OCA\Lantern\AppInfo\Application;
+use OCA\Lantern\Exception\ForgeAuthException;
 use OCA\Lantern\Exception\InvalidRefException;
+use OCA\Lantern\Exception\RateLimitException;
+use OCA\Lantern\Exception\RepoException;
 use OCA\Lantern\Exception\RepoNotFoundException;
 use OCA\Lantern\Model\RepoDescriptor;
 use OCA\Lantern\Provider\RepoProviderManager;
@@ -243,6 +246,15 @@ class RepoController extends Controller {
 		} catch (RepoNotFoundException $e) {
 			$this->logger->debug('lantern: raw not found: ' . $e->getMessage());
 			return new DataDisplayResponse('Not found', Http::STATUS_NOT_FOUND, ['Content-Type' => 'text/plain']);
+		} catch (RateLimitException $e) {
+			$this->logger->debug('lantern: raw rate limited: ' . $e->getMessage());
+			return new DataDisplayResponse($e->getMessage(), Http::STATUS_TOO_MANY_REQUESTS, ['Content-Type' => 'text/plain']);
+		} catch (ForgeAuthException $e) {
+			$this->logger->debug('lantern: raw forge auth: ' . $e->getMessage());
+			return new DataDisplayResponse($e->getMessage(), Http::STATUS_BAD_GATEWAY, ['Content-Type' => 'text/plain']);
+		} catch (RepoException $e) {
+			$this->logger->warning('lantern: raw upstream error: ' . $e->getMessage());
+			return new DataDisplayResponse('Upstream repository error', Http::STATUS_BAD_GATEWAY, ['Content-Type' => 'text/plain']);
 		} catch (\Throwable $e) {
 			$this->logger->error('lantern: unexpected raw error', ['exception' => $e]);
 			return new DataDisplayResponse('Internal error', Http::STATUS_INTERNAL_SERVER_ERROR, ['Content-Type' => 'text/plain']);
@@ -266,6 +278,18 @@ class RepoController extends Controller {
 		} catch (RepoNotFoundException $e) {
 			$this->logger->debug('lantern: not found: ' . $e->getMessage());
 			return new JSONResponse(['error' => 'Not found'], Http::STATUS_NOT_FOUND);
+		} catch (RateLimitException $e) {
+			// The message is curated (no internal detail) and actionable, so we
+			// surface it; 429 lets the client show an honest "try later" state.
+			$this->logger->debug('lantern: rate limited: ' . $e->getMessage());
+			return new JSONResponse(['error' => $e->getMessage()], Http::STATUS_TOO_MANY_REQUESTS);
+		} catch (ForgeAuthException $e) {
+			$this->logger->debug('lantern: forge auth: ' . $e->getMessage());
+			return new JSONResponse(['error' => $e->getMessage()], Http::STATUS_BAD_GATEWAY);
+		} catch (RepoException $e) {
+			// Upstream forge transport/error (not a 404). 502 Bad Gateway.
+			$this->logger->warning('lantern: upstream repo error: ' . $e->getMessage());
+			return new JSONResponse(['error' => 'Upstream repository error'], Http::STATUS_BAD_GATEWAY);
 		} catch (\Throwable $e) {
 			$this->logger->error('lantern: unexpected error', ['exception' => $e]);
 			return new JSONResponse(['error' => 'Internal error'], Http::STATUS_INTERNAL_SERVER_ERROR);

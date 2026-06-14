@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.0.1 — v2 hardening, part 1 (2026-06-14)
+
+The "feature zero" gate from `ROADMAP.md` §0: make the v2 surface as verified as
+v1 was, starting with the GitHub error contract and real-repo edge cases. No new
+user-facing features — correctness and tests only.
+
+- **Honest GitHub failure states.** A rate-limited response (HTTP 429, or 403
+  with the quota exhausted / a `Retry-After` header) is no longer reported to the
+  user as "Not found." It now surfaces as a distinct `RateLimitException` →
+  **HTTP 429** with an actionable message that names the reset time. An invalid,
+  expired, or under-scoped token (401/403) surfaces as `ForgeAuthException` →
+  **HTTP 502** telling the user to fix the token. Generic upstream errors (5xx,
+  transport failures) map to **502**, no longer masquerading as 404. Previously
+  every non-2xx collapsed into `RepoNotFoundException`.
+- **Testable error contract.** The status→exception decision moved into the pure
+  static `GitHubProvider::classifyStatus()`, and pagination math into
+  `pageFor()`, so both are unit-tested with fixtures instead of only live.
+- **Expanded test suite: 73 → 113 assertions.** New coverage for the GitHub
+  error contract (rate-limit/auth/not-found/generic, case-insensitive and empty
+  headers, the reset-time message), pagination edges, malformed/empty API
+  responses (mappers stay total), and real-repo edges on the local provider:
+  detached HEAD (defaultRef fallback + reads), no-commit/unborn repos
+  (defaultRef, empty refs, history-throws), and single-ref/minimal repos.
+- **Trust-boundary regression test.** A new fixture weaponises a repo's own
+  `.git/config` with a malicious `diff.external` driver and proves both that the
+  vector is real (plain `git diff` runs it) and that the `GitBinary` hardening
+  flags neutralise it — guarding the §4 standing rule for any future `git diff`
+  call. (The current show-based diff is additionally safe by command selection,
+  since `git show` ignores `diff.external` without `--ext-diff`; also asserted.)
+
 ## 2.0.0 — Horizons 0–4 (2026-06-14)
 
 A major step up from the 1.0.6 proof-of-concept, delivered as five "horizons"

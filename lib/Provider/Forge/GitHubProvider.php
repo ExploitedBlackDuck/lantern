@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace OCA\Lantern\Provider\Forge;
 
+use OCA\Lantern\Exception\ForgeAuthException;
 use OCA\Lantern\Exception\InvalidRefException;
+use OCA\Lantern\Exception\RateLimitException;
+use OCA\Lantern\Exception\RepoException;
 use OCA\Lantern\Exception\RepoNotFoundException;
 use OCA\Lantern\Model\BlobContent;
 use OCA\Lantern\Model\CommitInfo;
@@ -84,7 +87,7 @@ final class GitHubProvider implements IRepoProvider {
 		$ref = $this->assertRef($ref);
 		$limit = max(1, min($limit, 201));
 		$perPage = min($limit, 100);
-		$page = (int) floor($offset / max(1, $perPage)) + 1;
+		$page = self::pageFor($offset, $perPage);
 		$url = '/repos/' . $this->slug($repo) . '/commits?sha=' . rawurlencode($ref)
 			. '&per_page=' . $perPage . '&page=' . $page;
 		if ($path !== null && $path !== '') {
@@ -246,6 +249,69 @@ final class GitHubProvider implements IRepoProvider {
 		return $out;
 	}
 
+	/**
+	 * Convert an offset+page-size into GitHub's 1-based `page` number. Pure so
+	 * the pagination edge cases (offset 0, sub-page offsets, large offsets) are
+	 * unit-tested without a network round-trip.
+	 */
+	public static function pageFor(int $offset, int $perPage): int {
+		return (int) floor(max(0, $offset) / max(1, $perPage)) + 1;
+	}
+
+	/**
+	 * Map a GitHub REST status (and its rate-limit headers) to a typed
+	 * exception, or return cleanly on 2xx. This is the single source of truth
+	 * for the error contract — kept pure and static so every branch (rate limit,
+	 * bad token, forbidden scope, not found, generic upstream error) is unit-
+	 * tested with fixtures; the live request() path simply calls it. Returning
+	 * RepoNotFoundException for a 403 rate-limit (the pre-2.0.1 behaviour) is the
+	 * exact "opaque failure" the roadmap §0/§2 calls out.
+	 *
+	 * @param array<string,string> $headers response headers (case-insensitive keys)
+	 */
+	public static function classifyStatus(int $status, array $headers = [], string $body = ''): void {
+		if ($status >= 200 && $status < 300) {
+			return;
+		}
+		$h = [];
+		foreach ($headers as $k => $v) {
+			$h[strtolower($k)] = $v;
+		}
+		$get = static fn (string $k): ?string => (isset($h[$k]) && $h[$k] !== '') ? $h[$k] : null;
+		$remaining = $get('x-ratelimit-remaining');
+		$retryAfter = $get('retry-after');
+
+		// GitHub signals rate limiting as a 429, or a 403 with the remaining
+		// quota at 0 (primary limit) or a Retry-After header (secondary limit).
+		$rateLimited = $status === 429
+			|| ($status === 403 && (($remaining !== null && (int) $remaining === 0) || $retryAfter !== null));
+		if ($rateLimited) {
+			throw new RateLimitException(self::rateLimitMessage($retryAfter, $get('x-ratelimit-reset')));
+		}
+		if ($status === 401) {
+			throw new ForgeAuthException('GitHub rejected the token (401) — it may be invalid or expired.');
+		}
+		if ($status === 403) {
+			throw new ForgeAuthException('GitHub forbade the request (403) — the token may lack the required scope.');
+		}
+		if ($status === 404) {
+			throw new RepoNotFoundException('GitHub: not found');
+		}
+		if ($status >= 400) {
+			throw new RepoException('GitHub API error ' . $status);
+		}
+	}
+
+	private static function rateLimitMessage(?string $retryAfter, ?string $reset): string {
+		if ($retryAfter !== null && is_numeric($retryAfter)) {
+			return 'GitHub rate limit reached — try again in ' . (int) $retryAfter . 's.';
+		}
+		if ($reset !== null && is_numeric($reset)) {
+			return 'GitHub rate limit reached — resets at ' . gmdate('H:i', (int) $reset) . ' UTC.';
+		}
+		return 'GitHub rate limit reached — try again later.';
+	}
+
 	// --- HTTP plumbing (thin; exercised live) ---
 
 	private function slug(RepoDescriptor $repo): string {
@@ -288,19 +354,25 @@ final class GitHubProvider implements IRepoProvider {
 			]);
 			$status = $response->getStatusCode();
 			$body = (string) $response->getBody();
-			if ($status === 404) {
-				throw new RepoNotFoundException('GitHub: not found');
-			}
 			if ($status >= 400) {
 				$this->logger->warning('lantern: github API ' . $status . ' for ' . $url);
-				throw new RepoNotFoundException('GitHub API error ' . $status);
 			}
+			// classifyStatus throws the right typed exception (rate limit, auth,
+			// not found, generic) or returns cleanly on 2xx.
+			self::classifyStatus($status, [
+				'x-ratelimit-remaining' => $response->getHeader('X-RateLimit-Remaining'),
+				'x-ratelimit-reset' => $response->getHeader('X-RateLimit-Reset'),
+				'retry-after' => $response->getHeader('Retry-After'),
+			], $body);
 			return $body;
-		} catch (RepoNotFoundException $e) {
+		} catch (RepoException $e) {
+			// RepoNotFound / RateLimit / ForgeAuth / generic — already typed.
 			throw $e;
 		} catch (\Throwable $e) {
+			// Transport failure (DNS, TLS, timeout): a genuine upstream error,
+			// not a 404. RepoException maps to 502 in the controller guard.
 			$this->logger->error('lantern: github request failed', ['exception' => $e]);
-			throw new RepoNotFoundException('GitHub request failed');
+			throw new RepoException('GitHub request failed');
 		}
 	}
 
