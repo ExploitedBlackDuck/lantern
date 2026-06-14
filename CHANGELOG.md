@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.2.2 — Full-width fill + screenshots (2026-06-14)
+
+- **Full-width layout.** Nextcloud's `#content` is a flex row; `#lantern` was a
+  flex item with no `flex`/`width`, so it shrank to its content width (~880px)
+  and the desktop wallpaper showed through on wide screens. Added
+  `flex: 1 1 auto; width: 100%; min-width: 0` so the app fills the content area.
+  Verified in-browser (content width 1264 = full) on NC 34.
+- **Fresh screenshots** of the cleaned-up UI (files view, commit-range compare,
+  cross-repo search) in `docs/`, shown in the README and referenced from
+  `info.xml <screenshot>` (App Store). Replaces the pre-cleanup placeholder.
+- **README** updated to reflect GitLab as a supported source (it shipped in
+  2.1.0) and the "Add a GitHub or GitLab repository" entry point.
+
 ## 2.2.1 — UI / information-architecture cleanup (2026-06-14)
 
 Presentation only — no provider, controller, or git-core changes

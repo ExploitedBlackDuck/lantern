@@ -1,5 +1,11 @@
 #lantern {
 	display: flex;
+	/* NC's #content is a flex row; without this #lantern is a flex item that
+	 * shrinks to its content width, leaving the desktop wallpaper showing on
+	 * wide screens. flex:1 + width:100% make it fill the content area. */
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
 	height: 100%;
 	min-height: 100%;
 	/* Opaque themed surface so the Nextcloud desktop wallpaper does not bleed
