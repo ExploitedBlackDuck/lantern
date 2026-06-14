@@ -24,6 +24,10 @@ three providers behind the `IRepoProvider` seam.
 - **Tests 141 → 144** offline (range diff: cumulative changes, range-string
   rejection, the diff.external RCE block) and **live 18 → 20** against
   gitlab.com (the compare endpoint).
+- **Browser-verified on a live Nextcloud 34 container** (headless Chromium):
+  both new UIs work end-to-end — cross-repo search returns hits from multiple
+  repos and navigates to file+line on click; the History compare mode renders
+  the range diff. Zero console errors, zero page errors, zero 4xx/5xx.
 
 ## 2.1.0 — GitLab provider (2026-06-14)
 
