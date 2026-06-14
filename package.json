@@ -1,0 +1,29 @@
+{
+  "name": "lantern",
+  "version": "1.0.6",
+  "description": "Browse server-side git repositories inside Nextcloud",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "scripts": {
+    "build": "webpack --node-env production --progress",
+    "dev": "webpack --node-env development --progress",
+    "watch": "webpack --node-env development --progress --watch",
+    "lint": "eslint --ext .js,.vue src"
+  },
+  "dependencies": {
+    "@nextcloud/axios": "^2.5.0",
+    "@nextcloud/router": "^3.0.0",
+    "highlight.js": "^11.9.0",
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "@nextcloud/babel-config": "^1.2.0",
+    "@nextcloud/browserslist-config": "^3.0.0",
+    "@nextcloud/eslint-config": "^8.4.0",
+    "@nextcloud/webpack-vue-config": "^6.2.0",
+    "vue-loader": "^17.4.0"
+  },
+  "browserslist": [
+    "extends @nextcloud/browserslist-config"
+  ]
+}

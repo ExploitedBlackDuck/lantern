@@ -1,0 +1,156 @@
+#lantern {
+	display: flex;
+	height: 100%;
+	min-height: 100%;
+	/* Opaque themed surface so the Nextcloud desktop wallpaper does not bleed
+	 * through behind the content (which made muted text unreadable). Using the
+	 * theme token means this follows light/dark automatically. */
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+}
+
+.lantern-sidebar {
+	width: 280px;
+	flex: 0 0 280px;
+	border-right: 1px solid var(--color-border);
+	overflow-y: auto;
+	padding: 8px;
+	background: var(--color-main-background);
+}
+.lantern-main {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: auto;
+	padding: 12px 16px;
+	background: var(--color-main-background);
+}
+
+.lantern-tree { list-style: none; margin: 0; padding: 0; }
+.lantern-tree li { margin: 0; }
+
+.lantern-breadcrumb {
+	font-family: var(--font-face, sans-serif);
+	margin-bottom: 12px;
+	color: var(--color-text-maxcontrast);
+}
+
+/* Buttons styled as links/rows — real <button>s so they are keyboard-operable. */
+.lantern-link {
+	background: none;
+	border: none;
+	padding: 0;
+	color: var(--color-primary-element, var(--color-primary));
+	cursor: pointer;
+	font: inherit;
+	text-decoration: underline;
+}
+.lantern-link:focus-visible,
+.lantern-tree-row:focus-visible {
+	outline: 2px solid var(--color-primary-element, var(--color-primary));
+	outline-offset: -2px;
+	border-radius: var(--border-radius);
+}
+
+.lantern-tree-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 4px 8px;
+	border: none;
+	background: none;
+	font: inherit;
+	color: inherit;
+	text-align: left;
+	border-radius: var(--border-radius);
+	cursor: pointer;
+}
+.lantern-tree-row:hover { background: var(--color-background-hover); }
+.lantern-tree-row.is-active { background: var(--color-primary-element-light, var(--color-background-dark)); }
+.lantern-tree-row .name { flex: 1 1 auto; }
+.lantern-tree-row .size { color: var(--color-text-maxcontrast); font-size: 90%; }
+
+.lantern-code {
+	font-family: var(--font-face-monospace, monospace);
+	font-size: 13px;
+	white-space: pre;
+	tab-size: 4;
+	overflow-x: auto;
+	color: var(--color-main-text);
+	background: var(--color-background-dark);
+	border: 1px solid var(--color-border);
+	border-radius: var(--border-radius);
+	padding: 12px;
+}
+.lantern-empty, .lantern-binary {
+	color: var(--color-text-maxcontrast);
+	padding: 24px;
+	text-align: center;
+}
+.lantern-commit {
+	padding: 8px 0;
+	border-bottom: 1px solid var(--color-border);
+}
+.lantern-commit .subject { font-weight: 600; }
+.lantern-commit .meta { color: var(--color-text-maxcontrast); font-size: 90%; }
+.lantern-wide { width: 100%; max-width: 640px; box-sizing: border-box; }
+
+@media (prefers-reduced-motion: reduce) {
+	* { transition: none !important; animation: none !important; }
+}
+
+/* Syntax highlighting palette.
+ * Instead of shipping a fixed (dark) highlight.js theme, map hljs token classes
+ * to Nextcloud's themable text token for structural pieces (so comments/text
+ * follow the active theme) plus a compact set of mid-tone hues chosen to stay
+ * legible on BOTH light and dark backgrounds, with a prefers-color-scheme
+ * override that brightens them in dark mode.
+ *
+ * CAVEAT: the dark variant keys off @media (prefers-color-scheme: dark), which
+ * follows the OS, whereas Nextcloud's dark mode is a per-user APP setting that
+ * can diverge from the OS. A user on NC dark theme + light OS gets the
+ * light-tuned token colors on a dark code background. This is acceptable for
+ * v1; a fully native version would key off NC's own theme selector instead.
+ * Tracked for v1.x alongside @nextcloud/vue adoption. */
+.lantern-code .hljs-comment,
+.lantern-code .hljs-quote { color: var(--color-text-maxcontrast); font-style: italic; }
+.lantern-code .hljs-keyword,
+.lantern-code .hljs-selector-tag,
+.lantern-code .hljs-literal,
+.lantern-code .hljs-section { color: #8959a8; }
+.lantern-code .hljs-string,
+.lantern-code .hljs-attr,
+.lantern-code .hljs-meta-string { color: #718c00; }
+.lantern-code .hljs-number,
+.lantern-code .hljs-symbol,
+.lantern-code .hljs-built_in,
+.lantern-code .hljs-type { color: #c18401; }
+.lantern-code .hljs-title,
+.lantern-code .hljs-name,
+.lantern-code .hljs-function .hljs-title { color: #4271ae; }
+.lantern-code .hljs-variable,
+.lantern-code .hljs-regexp,
+.lantern-code .hljs-tag { color: #c82829; }
+.lantern-code .hljs-meta { color: var(--color-text-maxcontrast); }
+.lantern-code .hljs-addition { color: #718c00; }
+.lantern-code .hljs-deletion { color: #c82829; }
+
+@media (prefers-color-scheme: dark) {
+	.lantern-code .hljs-keyword,
+	.lantern-code .hljs-selector-tag,
+	.lantern-code .hljs-literal,
+	.lantern-code .hljs-section { color: #c594c5; }
+	.lantern-code .hljs-string,
+	.lantern-code .hljs-attr,
+	.lantern-code .hljs-meta-string { color: #b5bd68; }
+	.lantern-code .hljs-number,
+	.lantern-code .hljs-symbol,
+	.lantern-code .hljs-built_in,
+	.lantern-code .hljs-type { color: #de935f; }
+	.lantern-code .hljs-title,
+	.lantern-code .hljs-name,
+	.lantern-code .hljs-function .hljs-title { color: #81a2be; }
+	.lantern-code .hljs-variable,
+	.lantern-code .hljs-regexp,
+	.lantern-code .hljs-tag { color: #cc6666; }
+}

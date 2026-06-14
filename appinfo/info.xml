@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>lantern</id>
+	<name>Lantern</name>
+	<summary>Browse server-side git repositories inside Nextcloud</summary>
+	<description><![CDATA[
+Lantern is a read-only browser for git repositories that live on your Nextcloud
+server's disk. Browse the file tree, read files with syntax highlighting, and
+view recent commit history — all behind your existing Nextcloud login, with no
+external forge required.
+
+This is the v1 (local repositories) release. A pluggable provider interface is
+in place so remote-forge browsing (GitHub/GitLab) can be added later without
+changing the UI.
+
+Requires the git binary to be installed and runnable by the web-server user.
+The official Nextcloud Docker image does not include git; Lantern's setup check
+will warn you if it is missing.
+	]]></description>
+	<version>1.0.6</version>
+	<licence>agpl</licence>
+	<author mail="lantern@pxsec.xyz">Paul Ammann</author>
+	<namespace>Lantern</namespace>
+	<category>tools</category>
+	<category>integration</category>
+	<website>https://github.com/BlackDuckExploited/lantern</website>
+	<bugs>https://github.com/BlackDuckExploited/lantern/issues</bugs>
+	<repository type="git">https://github.com/BlackDuckExploited/lantern.git</repository>
+	<screenshot>https://raw.githubusercontent.com/BlackDuckExploited/lantern/main/docs/screenshot-files.png</screenshot>
+	<dependencies>
+		<php min-version="8.1" min-int-size="64"/>
+		<nextcloud min-version="30" max-version="34"/>
+	</dependencies>
+	<settings>
+		<admin>OCA\Lantern\Settings\AdminSettings</admin>
+		<admin-section>OCA\Lantern\Settings\AdminSection</admin-section>
+	</settings>
+	<navigations>
+		<navigation>
+			<name>Lantern</name>
+			<route>lantern.page.index</route>
+			<icon>app.svg</icon>
+		</navigation>
+	</navigations>
+</info>
