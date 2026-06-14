@@ -1,14 +1,18 @@
 # Lantern
 
 **A read-only git repository browser for Nextcloud — your server's repos, your
-own Files, and GitHub, all in one place.**
+own Files, and GitHub or GitLab, all in one place.**
 
 Lantern lets you browse git repositories from inside Nextcloud: read files with
 syntax highlighting, render Markdown, view commit history, diffs, and blame, and
-search across a repo — all behind your existing Nextcloud login. It is
-**read-only** by design: no commits, pushes, or edits.
+search across a repo (or across every repo at once) — all behind your existing
+Nextcloud login. It is **read-only** by design: no commits, pushes, or edits.
 
 ![Lantern browsing a repository](docs/screenshot-files.png)
+
+| Compare commits | Search every repo at once |
+| --- | --- |
+| ![Commit-range diff](docs/screenshot-compare.png) | ![Cross-repo search](docs/screenshot-search.png) |
 
 ## Three sources, one interface
 
@@ -16,7 +20,8 @@ search across a repo — all behind your existing Nextcloud login. It is
 | --- | --- | --- |
 | **Server-side repos** | git repos on the Nextcloud server's filesystem (e.g. `/srv/git/x`) | Admin → Settings → Administration → Lantern |
 | **Your Nextcloud Files** | a `.git` repository inside your own Files | Sidebar → "Add a repo from your Files" |
-| **GitHub** | a remote GitHub repository (public, or private with a token) | Sidebar → "Add a GitHub repository" |
+| **GitHub** | a remote GitHub repository (public, or private with a token) | Sidebar → "Add a GitHub or GitLab repository" |
+| **GitLab** | a GitLab project, including self-hosted instances (public, or private with a token) | Sidebar → "Add a GitHub or GitLab repository" |
 
 All three are read through the same `IRepoProvider` interface, so the browsing
 experience is identical regardless of where the repo lives.

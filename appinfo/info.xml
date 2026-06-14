@@ -25,7 +25,7 @@ Requires the git binary to be installed and runnable by the web-server user for
 server-side and Files repositories. The official Nextcloud Docker image does not
 include git; Lantern's setup check will warn you if it is missing.
 	]]></description>
-	<version>2.2.1</version>
+	<version>2.2.2</version>
 	<licence>agpl</licence>
 	<author mail="lantern@pxsec.xyz">Paul Ammann</author>
 	<namespace>Lantern</namespace>
@@ -35,6 +35,8 @@ include git; Lantern's setup check will warn you if it is missing.
 	<bugs>https://github.com/ExploitedBlackDuck/lantern/issues</bugs>
 	<repository type="git">https://github.com/ExploitedBlackDuck/lantern.git</repository>
 	<screenshot>https://raw.githubusercontent.com/ExploitedBlackDuck/lantern/main/docs/screenshot-files.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/ExploitedBlackDuck/lantern/main/docs/screenshot-compare.png</screenshot>
+	<screenshot>https://raw.githubusercontent.com/ExploitedBlackDuck/lantern/main/docs/screenshot-search.png</screenshot>
 	<dependencies>
 		<php min-version="8.1" min-int-size="64"/>
 		<nextcloud min-version="30" max-version="34"/>
