@@ -26,9 +26,20 @@ or frontend rewrite, the architecture was built for exactly this.
 - **Test suite 113 → 141 assertions:** GitLab mappers (tree/blob/commits/refs/
   search/diff-assembly/blame), the error contract, pagination, and
   malformed/empty responses.
-- *Not yet live-verified against a real GitLab instance* — the pure mapping
-  layer is fixture-tested; the thin HTTP plumbing mirrors the live-verified
-  GitHub backend and is pending a live pass (no GitLab instance in this build).
+- **Live-verified against the real gitlab.com API** via `tests/live-gitlab.php`
+  (network-gated, not part of the offline suite): every endpoint URL and JSON
+  shape the provider uses, fed through the real mappers — 18/18 green. The pass
+  surfaced and fixed two real behaviours:
+  - GitLab's blob-search API requires authentication **even for public
+    projects** (401 anonymously). `search()` now degrades to "no results" when
+    no token is configured, instead of surfacing an auth error on an otherwise
+    anonymous browse (every other read works without a token).
+  - The branch/tag lists are bounded at `per_page=100` (same as the GitHub
+    backend); on a repo with >100 branches the default may page out of the
+    picker list. `defaultRef()` is fetched independently so browsing is
+    unaffected; full ref pagination is a possible follow-up.
+  - Still pending: the with-token private-project path and the NC
+    `IClientService` wiring (identical to the live-verified GitHub backend).
 
 ## 2.0.1 — v2 hardening, part 1 (2026-06-14)
 

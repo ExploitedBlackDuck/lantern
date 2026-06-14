@@ -133,6 +133,14 @@ final class GitLabProvider implements IRepoProvider {
 		if ($query === '') {
 			return [];
 		}
+		// GitLab's project blob-search API requires authentication even for
+		// public projects (it 401s anonymously). When no token is configured,
+		// degrade gracefully to "no results" rather than surfacing an auth error
+		// on an otherwise-anonymous browse — every other read works without one.
+		$uid = $this->userSession->getUser()?->getUID();
+		if ($uid === null || ($this->store->tokenFor($uid, $repo->id) ?? '') === '') {
+			return [];
+		}
 		$limit = max(1, min($limit, 100));
 		// GitLab project search with the blobs scope returns file-level hits that
 		// DO carry a line number (startline) and a snippet — better than GitHub.
