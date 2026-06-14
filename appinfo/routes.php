@@ -15,7 +15,9 @@ return [
 		['name' => 'repo#refs', 'url' => '/api/repos/{repoId}/refs', 'verb' => 'GET'],
 		['name' => 'repo#raw', 'url' => '/api/repos/{repoId}/raw', 'verb' => 'GET'],
 		['name' => 'repo#search', 'url' => '/api/repos/{repoId}/search', 'verb' => 'GET'],
+		['name' => 'repo#searchAll', 'url' => '/api/search', 'verb' => 'GET'],
 		['name' => 'repo#diff', 'url' => '/api/repos/{repoId}/diff', 'verb' => 'GET'],
+		['name' => 'repo#diffRange', 'url' => '/api/repos/{repoId}/diff-range', 'verb' => 'GET'],
 		['name' => 'repo#blame', 'url' => '/api/repos/{repoId}/blame', 'verb' => 'GET'],
 
 		// Per-user Files-backed repos (Horizon 2)

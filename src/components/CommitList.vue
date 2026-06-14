@@ -1,5 +1,5 @@
 <script>
-import { fetchCommits, fetchDiff } from '../api.js'
+import { fetchCommits, fetchDiff, fetchRangeDiff } from '../api.js'
 
 export default {
 	name: 'CommitList',
@@ -12,17 +12,26 @@ export default {
 		return {
 			commits: [], loading: false, error: null, hasMore: false, pageSize: 50,
 			openHash: null, diffLines: [], diffLoading: false,
+			// commit-range compare
+			compareBase: null, rangeOpen: false, rangeLines: [], rangeLoading: false,
+			rangeBase: '', rangeHead: '',
 		}
 	},
 	watch: {
-		repo: 'load',
-		refName: 'load',
-		path: 'load',
+		repo: 'reset',
+		refName: 'reset',
+		path: 'reset',
 	},
 	mounted() {
 		this.load()
 	},
 	methods: {
+		reset() {
+			this.compareBase = null
+			this.rangeOpen = false
+			this.openHash = null
+			this.load()
+		},
 		async load() {
 			this.loading = true
 			this.error = null
@@ -57,6 +66,9 @@ export default {
 				return iso
 			}
 		},
+		shortHash(hash) {
+			return (hash || '').slice(0, 7)
+		},
 		async toggleDiff(hash) {
 			if (this.openHash === hash) { this.openHash = null; this.diffLines = []; return }
 			this.openHash = hash
@@ -69,6 +81,36 @@ export default {
 				this.diffLines = [{ cls: 'meta', text: 'Could not load diff.' }]
 			} finally {
 				this.diffLoading = false
+			}
+		},
+		// --- commit-range compare ---
+		setBase(hash) {
+			this.compareBase = hash
+			this.rangeOpen = false
+		},
+		cancelCompare() {
+			this.compareBase = null
+			this.rangeOpen = false
+		},
+		async compareTo(hash) {
+			// Order older→newer so additions read as '+': in a newest-first list
+			// the larger index is the older commit, which becomes the base.
+			const i1 = this.commits.findIndex((c) => c.hash === this.compareBase)
+			const i2 = this.commits.findIndex((c) => c.hash === hash)
+			const base = i1 >= i2 ? this.compareBase : hash
+			const head = i1 >= i2 ? hash : this.compareBase
+			this.rangeBase = this.shortHash(base)
+			this.rangeHead = this.shortHash(head)
+			this.rangeOpen = true
+			this.rangeLoading = true
+			this.rangeLines = []
+			try {
+				const text = await fetchRangeDiff(this.repo.id, base, head)
+				this.rangeLines = text ? this.classifyDiff(text) : [{ cls: 'meta', text: 'No differences.' }]
+			} catch (e) {
+				this.rangeLines = [{ cls: 'meta', text: 'Could not load comparison.' }]
+			} finally {
+				this.rangeLoading = false
 			}
 		},
 		// Tag each diff line so the template can colour it. Returns plain text;
@@ -93,6 +135,23 @@ export default {
 		<div v-if="loading" class="lantern-empty">Loading…</div>
 		<div v-else-if="error" class="lantern-empty">{{ error }}</div>
 		<div v-else-if="!commits.length" class="lantern-empty">No commits.</div>
+
+		<p v-if="compareBase" class="lantern-compare-banner">
+			Comparing from <code>{{ shortHash(compareBase) }}</code> — pick another commit's
+			<strong>“compare”</strong> to diff against it.
+			<button type="button" class="lantern-link" @click="cancelCompare">Cancel</button>
+		</p>
+
+		<div v-if="rangeOpen" class="lantern-diff lantern-range-diff">
+			<p class="lantern-compare-banner">
+				Diff <code>{{ rangeBase }}</code> … <code>{{ rangeHead }}</code>
+				<button type="button" class="lantern-link" @click="rangeOpen = false">Close</button>
+			</p>
+			<div v-if="rangeLoading" class="lantern-empty">Loading comparison…</div>
+			<pre v-else class="lantern-code lantern-diff-pre"><template v-for="(l, i) in rangeLines" :key="i"><span :class="'dl-' + l.cls">{{ l.text }}</span>
+</template></pre>
+		</div>
+
 		<div v-for="c in commits" :key="c.hash" class="lantern-commit">
 			<button type="button" class="lantern-commit-toggle" @click="toggleDiff(c.hash)">
 				<div class="subject">{{ c.subject }}</div>
@@ -101,6 +160,11 @@ export default {
 					<span class="lantern-commit-diffhint">{{ openHash === c.hash ? '▾ hide diff' : '▸ diff' }}</span>
 				</div>
 			</button>
+			<div class="lantern-commit-actions">
+				<button v-if="!compareBase" type="button" class="lantern-link" @click="setBase(c.hash)">⇄ compare</button>
+				<span v-else-if="compareBase === c.hash" class="lantern-compare-base">base ✓</span>
+				<button v-else type="button" class="lantern-link" @click="compareTo(c.hash)">⇄ compare to this</button>
+			</div>
 			<div v-if="openHash === c.hash" class="lantern-diff">
 				<div v-if="diffLoading" class="lantern-empty">Loading diff…</div>
 				<pre v-else class="lantern-code lantern-diff-pre"><template v-for="(l, i) in diffLines" :key="i"><span :class="'dl-' + l.cls">{{ l.text }}</span>

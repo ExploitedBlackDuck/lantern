@@ -142,6 +142,14 @@ try {
 	// --- diff + blame (H4) ---
 	$diff = $provider->getCommitDiff($repo, $ref);
 	$check('commit diff is a unified patch', str_contains($diff, 'diff --git') && str_contains($diff, '+extra line'));
+	// commit-range diff (Tier 2): base..head shows cumulative changes
+	$rdCommits = $provider->listCommits($repo, $ref, null, 50);
+	$rangeDiff = $provider->getRangeDiff($repo, $rdCommits[2]->hash, $rdCommits[0]->hash);
+	$check('range diff base..head shows cumulative changes across commits',
+		str_contains($rangeDiff, 'diff --git') && str_contains($rangeDiff, '+extra line') && str_contains($rangeDiff, 'hi v2'));
+	$check('range diff rejects an injected range string as a ref',
+		$throws(static fn () => $provider->getRangeDiff($repo, 'a..b', $rdCommits[0]->hash)));
+
 	$blame = $provider->blame($repo, $ref, 'README.md');
 	$check('blame returns one entry per line', \count($blame) === 4);
 	$check('blame carries author + full hash', $blame[0]->author === 'Tester' && \strlen($blame[0]->hash) === 40);
@@ -252,6 +260,15 @@ try {
 		$diff = $provider->getCommitDiff($evil, 'HEAD');
 		$check('getCommitDiff yields a diff without invoking diff.external',
 			!file_exists($sentinel) && str_contains($diff, 'diff --git'));
+		@unlink($sentinel);
+
+		// Range diff uses `git diff`, which DOES honor diff.external — so this is
+		// the real test that --no-ext-diff neutralises it while still producing
+		// a valid diff (Tier 2).
+		$evilCommits = $provider->listCommits($evil, 'HEAD', null, 5);
+		$rd = $provider->getRangeDiff($evil, $evilCommits[1]->hash, $evilCommits[0]->hash);
+		$check('getRangeDiff (git diff) neutralises diff.external (no RCE) + still diffs',
+			!file_exists($sentinel) && str_contains($rd, 'diff --git'));
 		@unlink($sentinel);
 	} finally {
 		destroyRepo($evilPath);

@@ -92,6 +92,15 @@ interface IRepoProvider {
 	public function getCommitDiff(RepoDescriptor $repo, string $ref): string;
 
 	/**
+	 * Unified diff (patch text) between two commits/refs ($baseRef..$headRef).
+	 *
+	 * Same hard constraint as getCommitDiff: a repo-controlled external diff
+	 * driver MUST NOT run (§9.6) — disable `diff.external` / textconv /
+	 * attributes filters, or go via an API.
+	 */
+	public function getRangeDiff(RepoDescriptor $repo, string $baseRef, string $headRef): string;
+
+	/**
 	 * Per-line authorship for a file at a ref. May return [] if the backend
 	 * does not support blame (e.g. a forge with no blame REST endpoint).
 	 *

@@ -43,6 +43,20 @@ export async function fetchBlame(repoId, ref, path) {
 	return data.blame
 }
 
+// Diff between two commits/refs (base..head).
+export async function fetchRangeDiff(repoId, baseRef, headRef) {
+	const { data } = await axios.get(base(`/api/repos/${encodeURIComponent(repoId)}/diff-range`), {
+		params: { base: baseRef, head: headRef },
+	})
+	return data.diff
+}
+
+// Search across every repo visible to the user (single-pane "find everywhere").
+export async function searchAllRepos(q, limit = 10) {
+	const { data } = await axios.get(base('/api/search'), { params: { q, limit } })
+	return data
+}
+
 export async function fetchRefs(repoId) {
 	const { data } = await axios.get(base(`/api/repos/${encodeURIComponent(repoId)}/refs`))
 	return data.refs

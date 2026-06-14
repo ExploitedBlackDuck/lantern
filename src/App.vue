@@ -7,13 +7,14 @@ import EmptyState from './components/EmptyState.vue'
 import ReadmeView from './components/ReadmeView.vue'
 import RefPicker from './components/RefPicker.vue'
 import SearchBox from './components/SearchBox.vue'
+import GlobalSearchBox from './components/GlobalSearchBox.vue'
 import MyReposManager from './components/MyReposManager.vue'
 import ForgeRepoManager from './components/ForgeRepoManager.vue'
-import { fetchRepos, searchRepo } from './api.js'
+import { fetchRepos, searchRepo, searchAllRepos } from './api.js'
 
 export default {
 	name: 'App',
-	components: { RepoList, TreeBrowser, BlobViewer, CommitList, EmptyState, ReadmeView, RefPicker, SearchBox, MyReposManager, ForgeRepoManager },
+	components: { RepoList, TreeBrowser, BlobViewer, CommitList, EmptyState, ReadmeView, RefPicker, SearchBox, GlobalSearchBox, MyReposManager, ForgeRepoManager },
 	props: {
 		// Server-provided first-paint context (see templates/main.php).
 		isAdmin: { type: Boolean, default: false },
@@ -36,6 +37,12 @@ export default {
 			searchQuery: '',
 			searchResults: [],
 			searching: false,
+			// cross-repo (global) search
+			globalQuery: '',
+			globalResults: [],
+			globalSearching: false,
+			globalTruncated: false,
+			globalSearchedRepos: 0,
 			error: null,
 			loading: true,
 		}
@@ -132,6 +139,37 @@ export default {
 				this.searching = false
 			}
 		},
+		async onGlobalSearch(q) {
+			this.globalQuery = q
+			if (!q) { this.globalResults = []; if (this.view === 'globalsearch') this.view = 'tree'; return }
+			this.view = 'globalsearch'
+			this.globalSearching = true
+			this.globalResults = []
+			try {
+				const data = await searchAllRepos(q)
+				this.globalResults = data.results
+				this.globalTruncated = !!data.truncated
+				this.globalSearchedRepos = data.searchedRepos || 0
+			} catch (e) {
+				this.globalResults = []
+			} finally {
+				this.globalSearching = false
+			}
+		},
+		openGlobalResult(group, m) {
+			// Jump to the matched repo + file + line.
+			const repo = this.repos.find((r) => r.id === group.repo.id)
+			if (!repo) return
+			this.activeRepo = repo
+			this.ref = group.ref || ''
+			window.location.hash = '#L' + m.line
+			const i = m.path.lastIndexOf('/')
+			this.path = i === -1 ? '' : m.path.slice(0, i)
+			this.selectedBlobPath = m.path
+			this.entries = []
+			this.view = 'tree'
+			this.syncUrl()
+		},
 		openResult(m) {
 			// Jump to the matched file + line. Set the hash before the blob so
 			// BlobViewer picks up the line range when it loads.
@@ -162,6 +200,9 @@ export default {
 <template>
 	<div class="lantern-root" style="display:flex;width:100%;height:100%;min-height:0;">
 		<aside class="lantern-sidebar">
+			<GlobalSearchBox
+				v-if="repos.length"
+				@search="onGlobalSearch" />
 			<RepoList
 				:repos="repos"
 				:active-id="activeRepo && activeRepo.id"
@@ -194,6 +235,31 @@ export default {
 				v-else-if="!repos.length"
 				:is-admin="isAdmin"
 				:settings-url="settingsUrl" />
+
+			<div v-else-if="view === 'globalsearch'" class="lantern-searchresults">
+				<div v-if="globalSearching" class="lantern-empty">Searching all repositories…</div>
+				<template v-else>
+					<p class="lantern-search-summary">
+						{{ globalResults.length }} repositor{{ globalResults.length === 1 ? 'y' : 'ies' }} with matches
+						for “{{ globalQuery }}” (searched {{ globalSearchedRepos }})
+						<span v-if="globalTruncated"> — more repos not searched (limit reached)</span>
+						<button type="button" class="lantern-link" @click="onGlobalSearch('')">Clear</button>
+					</p>
+					<div v-if="!globalResults.length" class="lantern-empty">No matches.</div>
+					<div v-for="g in globalResults" :key="g.repo.id" class="lantern-global-group">
+						<h3 class="lantern-global-repo">{{ g.repo.name }} <span class="lantern-myrepos-invalid">({{ g.repo.provider }})</span></h3>
+						<ul class="lantern-tree" role="list">
+							<li v-for="(m, idx) in g.matches" :key="idx" class="lantern-search-hit">
+								<button type="button" class="lantern-link" @click="openGlobalResult(g, m)">
+									{{ m.path }}<span v-if="m.line" class="lantern-search-line">:{{ m.line }}</span>
+								</button>
+								<code v-if="m.text" class="lantern-search-text">{{ m.text }}</code>
+							</li>
+						</ul>
+					</div>
+				</template>
+			</div>
+
 			<template v-else-if="activeRepo">
 				<div class="lantern-tabs" style="margin-bottom:8px;">
 					<button :class="{ primary: view === 'tree' }" @click="showTree">Files</button>
