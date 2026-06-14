@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.2.1 — UI / information-architecture cleanup (2026-06-14)
+
+Presentation only — no provider, controller, or git-core changes
+(`UI_CLEANUP_SPEC.md`). Fixes the "everything is the same grey pill" problem and
+separates navigation chrome from the content being browsed.
+
+- **Root cause fixed:** Nextcloud styles every bare `<button>` with a filled
+  background (`button:not(.button-vue,…)`, specificity 0,1,1), which beat our
+  single-class resets — so the breadcrumb, file tree, and repo list all rendered
+  as identical pills. An `#lantern`-scoped reset now wins the cascade cleanly
+  (no `!important`); hover/open/active fills are re-asserted above it.
+- **Breadcrumb** is now true path text (muted, `/`-separated links, current
+  segment plain) — visually distinct from the repo selectors, no longer a
+  duplicate pill of the repo name.
+- **File tree** renders as rows (no pill at rest, full-width hover); the
+  currently-open file gets a tint + left-accent and `aria-current`.
+- **Layout/IA:** the branch/tag picker and in-repo search moved out of the
+  sidebar into a **main-pane toolbar** (alongside the Files/History tabs), with
+  the tree/file view now the first substantial thing in the main pane. The
+  sidebar is just global search, the repo list, and the add buttons. Global
+  search stays in the sidebar.
+- **Active repo** in the sidebar is unmistakable (filled chip + left-accent bar)
+  and carries `aria-current="true"`; repo selectors use a dedicated
+  `.lantern-repo-item` class so "pill" now means only "pick a repo."
+- Theme tokens throughout; all controls remain keyboard-operable with visible
+  `:focus-visible` outlines. **Browser-verified on NC 34** (headless Chromium):
+  18/18, zero console errors, zero 404s.
+- The "Add a GitHub or GitLab repository" label is correct as-is (GitLab shipped
+  in 2.1.0); the docs were already synced.
+
 ## 2.2.0 — Commit-range diffs + cross-repo search (2026-06-14)
 
 Roadmap §1 Tier 2 — finishing features that already half-existed, across all

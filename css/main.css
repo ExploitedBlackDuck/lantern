@@ -84,6 +84,24 @@
 .lantern-searchbox-row { display: flex; gap: 6px; }
 .lantern-searchbox-row input { flex: 1 1 auto; min-width: 0; }
 
+/* Main-pane toolbar: tabs on the left, per-repo branch picker + in-repo search
+ * on the right. The relocated RefPicker/SearchBox drop their sidebar margins. */
+.lantern-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 12px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--color-border);
+	margin-bottom: 12px;
+}
+.lantern-tabs { display: flex; gap: 6px; }
+.lantern-toolbar .lantern-tabs { margin-right: auto; }
+.lantern-toolbar .lantern-refpicker,
+.lantern-toolbar .lantern-searchbox { margin: 0; }
+.lantern-toolbar .lantern-refpicker-select { min-width: 160px; width: auto; }
+.lantern-toolbar .lantern-searchbox-row input { min-width: 180px; }
+
 .lantern-search-summary { color: var(--color-text-maxcontrast); margin: 4px 0 12px; }
 .lantern-search-hit { padding: 6px 0; border-bottom: 1px solid var(--color-border); }
 .lantern-search-line { color: var(--color-text-maxcontrast); }
@@ -100,10 +118,31 @@
 .lantern-tree { list-style: none; margin: 0; padding: 0; }
 .lantern-tree li { margin: 0; }
 
+/* Path breadcrumb — quiet text with "/" separators, NOT repo-selector pills. */
 .lantern-breadcrumb {
-	font-family: var(--font-face, sans-serif);
-	margin-bottom: 12px;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	margin: 4px 0 12px;
+	font-size: 90%;
 	color: var(--color-text-maxcontrast);
+}
+.lantern-crumb-sep { color: var(--color-text-maxcontrast); }
+.lantern-crumb-current { color: var(--color-main-text); font-weight: 600; }
+.lantern-crumb-link {
+	background: none;
+	border: none;
+	padding: 2px;
+	font: inherit;
+	color: var(--color-primary-element, var(--color-primary));
+	cursor: pointer;
+	border-radius: var(--border-radius);
+}
+.lantern-crumb-link:hover { text-decoration: underline; }
+.lantern-crumb-link:focus-visible {
+	outline: 2px solid var(--color-primary-element, var(--color-primary));
+	outline-offset: 1px;
 }
 
 /* Buttons styled as links/rows — real <button>s so they are keyboard-operable. */
@@ -117,18 +156,21 @@
 	text-decoration: underline;
 }
 .lantern-link:focus-visible,
-.lantern-tree-row:focus-visible {
+.lantern-tree-row:focus-visible,
+.lantern-repo-item:focus-visible {
 	outline: 2px solid var(--color-primary-element, var(--color-primary));
 	outline-offset: -2px;
 	border-radius: var(--border-radius);
 }
 
+/* File-tree entries: rows, not pills. No background at rest, full-width hover,
+ * and a left-accent + tint on the file currently open in the main pane. */
 .lantern-tree-row {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 	width: 100%;
-	padding: 4px 8px;
+	padding: 6px 8px;
 	border: none;
 	background: none;
 	font: inherit;
@@ -138,9 +180,68 @@
 	cursor: pointer;
 }
 .lantern-tree-row:hover { background: var(--color-background-hover); }
-.lantern-tree-row.is-active { background: var(--color-primary-element-light, var(--color-background-dark)); }
+.lantern-tree-row.is-open {
+	background: var(--color-primary-element-light, var(--color-background-dark));
+	box-shadow: inset 3px 0 0 var(--color-primary-element, var(--color-primary));
+}
 .lantern-tree-row .name { flex: 1 1 auto; }
 .lantern-tree-row .size { color: var(--color-text-maxcontrast); font-size: 90%; }
+
+/* Repo selectors (sidebar): a chip/selector — pills are allowed HERE (and only
+ * here) now that the breadcrumb and file tree no longer use them, so a pill
+ * unambiguously means "pick a repo". The active repo is unmistakable. */
+.lantern-repo-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 6px 8px;
+	border: none;
+	background: none;
+	font: inherit;
+	color: inherit;
+	text-align: left;
+	border-radius: var(--border-radius);
+	cursor: pointer;
+}
+.lantern-repo-item:hover { background: var(--color-background-hover); }
+.lantern-repo-item .name { flex: 1 1 auto; }
+.lantern-repo-item[aria-current="true"],
+.lantern-repo-item.is-active {
+	background: var(--color-primary-element-light, var(--color-background-dark));
+	font-weight: 600;
+	box-shadow: inset 3px 0 0 var(--color-primary-element, var(--color-primary));
+}
+
+/* Nextcloud styles every bare <button> with a filled background + border
+ * (`button:not(.button-vue,…)`, specificity 0,1,1), which is what made the
+ * breadcrumb, file tree, and repo list all read as identical grey pills — our
+ * single-class resets (0,1,0) lost the cascade. Scoping the reset under the
+ * #lantern id (1,x,0) wins it cleanly, no !important. The link/row/crumb/toggle
+ * controls are meant to be chrome-free at rest; their hover/.is-open/.is-active
+ * states are higher-specificity and still apply. Real action buttons (.primary,
+ * tabs, Load more) deliberately keep NC's button styling. */
+#lantern .lantern-link,
+#lantern .lantern-crumb-link,
+#lantern .lantern-tree-row,
+#lantern .lantern-repo-item,
+#lantern .lantern-commit-toggle,
+#lantern .lantern-myrepos-remove {
+	background-color: transparent;
+	border: none;
+}
+/* Re-assert the interactive states ABOVE the reset (the #lantern-scoped reset
+ * outranks bare-class state rules, so the hover/open/active fills must also be
+ * #lantern-scoped or they'd be flattened to transparent). */
+#lantern .lantern-tree-row:hover,
+#lantern .lantern-repo-item:hover {
+	background-color: var(--color-background-hover);
+}
+#lantern .lantern-tree-row.is-open,
+#lantern .lantern-repo-item[aria-current="true"],
+#lantern .lantern-repo-item.is-active {
+	background-color: var(--color-primary-element-light, var(--color-background-dark));
+}
 
 .lantern-code {
 	font-family: var(--font-face-monospace, monospace);
