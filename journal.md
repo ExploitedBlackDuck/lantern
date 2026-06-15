@@ -1,12 +1,12 @@
 # Lantern — Development Journal
 
-**As of 2026-06-14 · App version 2.2.0**
+**As of 2026-06-15 · App version 2.2.2**
 
-A running record of the 1.0.6 → 2.2.0 build: what was done, how it was verified,
+A running record of the 1.0.6 → 2.2.2 build: what was done, how it was verified,
 the local test environment, and what's left. For the durable design-of-record
 see `docs/PROJECT_BIBLE.md`; for the full change history see `CHANGELOG.md`.
 
-> **2.0.1 → 2.2.0 (post-2.0 work) is summarised in §7 at the bottom;** §§1–6
+> **2.0.1 → 2.2.2 (post-2.0 work) is summarised in §7 at the bottom;** §§1–6
 > describe the 2.0.0 build and remain accurate except where §7 supersedes them.
 
 ---
@@ -95,7 +95,8 @@ A throwaway Nextcloud 34 container is the live test/verify target.
 - **URL:** http://localhost:8099
 - **Admin:** `admin` / `Lantern-Verify-2026-xZ` *(reset 2.2.0; NC password
   policy rejects weak/compromised values, hence the strong string)*
-- **Container:** `nc-lantern` · **app installed:** `lantern 2.2.0`
+- **Container:** `nc-lantern` (port 8099) · **app installed:** built from `main`
+  (2.2.x; `main` is 2.2.2). Redeploy via the recipe below after a `git pull`.
 - Configured *test data* repos (not part of the app; remove in Settings →
   Administration → Lantern): `Test Repo` → `/srv/git/testrepo` (root-owned, to
   exercise `safe.directory`), plus `Alpha` → `/srv/git/alpha` (3 commits) and
@@ -166,8 +167,8 @@ docker rm -f nc-lantern
 
 ## 6. Known limitations / follow-ups
 
-- **Screenshots** still need capturing from a browser for the README and the
-  `info.xml <screenshot>` URL (the latter is required for the App Store).
+- ~~**Screenshots**~~ — **captured in 2.2.2 (§7):** README + three
+  `info.xml <screenshot>` entries (raw `main` URLs resolve).
 - ~~**GitLab** provider~~ — **built in 2.1.0 (§7).**
 - ~~**Commit-range diffs**~~ — **built in 2.2.0 (§7).** **GitHub blame** (REST
   has none; would need GraphQL) is still unbuilt; GitLab blame *does* work
@@ -180,19 +181,23 @@ docker rm -f nc-lantern
 
 ---
 
-## 7. Post-2.0 work (2.0.1 → 2.2.0)
+## 7. Post-2.0 work (2.0.1 → 2.2.2)
 
 Driven by `ROADMAP.md`: close the v2 hardening gate (§0), then the highest
-value-to-effort features (§1 Tier 1 GitLab, Tier 2 diffs/search). This working
-directory **is** a git repo now (the §6 "not committed" note was stale); work
-landed on two branches with open PRs:
+value-to-effort features (§1 Tier 1 GitLab, Tier 2 diffs/search), then a
+UI/IA cleanup and polish. This working directory **is** a git repo (the §6
+"not committed" note was stale). Work shipped as four PRs, **all now merged to
+`main`** (stacked PRs were base-retargeted to `main` as each landed so diffs
+didn't double-count; feature branches deleted):
 
-- **PR #1** `harden-v2-github-error-contract` → `add-gitlab-provider` (base
-  `main`): 2.0.1 hardening + 2.1.0 GitLab.
-- **PR #2** `tier2-diffs-search` (stacked, base `add-gitlab-provider`): 2.2.0.
+- **PR #1** 2.0.1 hardening + 2.1.0 GitLab → `main`.
+- **PR #2** 2.2.0 Tier 2 (diffs + cross-repo search) → `main` (was stacked).
+- **PR #3** 2.2.1 UI/IA cleanup → `main` (was stacked).
+- **PR #4** 2.2.2 full-width fill + screenshots → `main`.
 
-(`gh` isn't logged in here; pull the token from the git credential helper into
-`GH_TOKEN` for `gh` commands — see the `lantern-git-push-pr` memory.)
+`main` is at **2.2.2**; merge commits `f78c2a7` → `1a74e35` → `2cdfdef` →
+`ce3a4cc`. (`gh` isn't logged in here; pull the token from the git credential
+helper into `GH_TOKEN` for `gh` commands — see the `lantern-git-push-pr` memory.)
 
 ### 2.0.1 — hardening (ROADMAP §0, "feature zero")
 - **Honest GitHub failure states.** Every non-2xx used to collapse into
@@ -251,21 +256,40 @@ repo is an unmistakable chip with `aria-current`. Browser-verified on NC 34:
 18/18, zero console errors, zero 404s. The "GitHub or GitLab" label was already
 correct (GitLab shipped in 2.1.0).
 
+### 2.2.2 — full-width fill + screenshots
+Found while capturing screenshots: the app didn't fill wide screens — the NC
+desktop wallpaper bled in on the right. Diagnosed via computed widths (`#lantern`
+**883px** inside a **1264px** `#content`): NC's `#content` is a flex row and
+`#lantern` was a flex item with no `flex`/`width`, so it shrank to content width.
+Fix: `flex: 1 1 auto; width: 100%; min-width: 0` → confirmed in-browser
+(**1264 = 1264**). Replaced the pre-cleanup placeholder with three fresh
+screenshots (files / commit-range compare / cross-repo search) in `docs/`, wired
+into the README and `info.xml <screenshot>` (3 entries; raw `main` URLs return
+200, so the App-Store screenshot follow-up is unblocked). README now lists
+GitLab as a source.
+
+> **Tooling gotcha (new):** the default `headless: 'new'` Chromium crashed
+> renderers this session — even a bare login screenshot failed (environmental,
+> not app-related). `headless: 'shell'` (chrome-headless-shell) was stable and
+> was used for all verification + capture. Use it for the puppeteer recipe if
+> 'new' is flaky.
+
 ### Verification (cumulative)
 - **Offline suite: 73 → 144 assertions**, all green
   (`php tests/run-core-tests.php`) — GitHub + GitLab mappers, both error
   contracts, pagination, malformed/empty responses, real-repo edges, and the
-  range-diff `diff.external` RCE block.
+  range-diff `diff.external` RCE block. Re-run green on `main` post-merge.
 - **Live gitlab.com: 20/20** (`php tests/live-gitlab.php` — network-gated).
-- **Browser (headless Chromium) on the live NC 34 container: 16/16.** Deployed
-  2.2.0, created the Alpha/Beta/test repos above, and drove both new UIs
-  end-to-end: cross-repo search returned hits from both repos and navigated to
-  file+line; History compare rendered the range diff. **Zero console errors,
-  zero page errors, zero `/apps/lantern` 4xx/5xx.** (HARD RULE 0 satisfied.)
+- **Browser (headless Chromium) on the live NC 34 container:** Tier 2 **16/16**;
+  UI cleanup + width fix **18/18** (toolbar placement, breadcrumb/file-rows not
+  pills via computed-bg checks, open-file tint, active-repo chip + `aria-current`,
+  full-width fill). **Zero console errors, zero page errors, zero
+  `/apps/lantern` 4xx/5xx** throughout. (HARD RULE 0 satisfied.)
 
 ### Remaining follow-ups
 - With-token **private** GitLab project path (needs a real PAT; the NC
   `IClientService` wiring mirrors the live-verified GitHub backend).
 - Forge **ref pagination beyond 100** branches/tags (affects both GitHub and
   GitLab pickers).
-- GitHub blame (GraphQL), per-user sharing, App-Store submission, screenshots.
+- GitHub blame (GraphQL); per-user sharing; **App-Store submission** (tag/sign/
+  submit — screenshots are now ready and hosted, so this is unblocked).
