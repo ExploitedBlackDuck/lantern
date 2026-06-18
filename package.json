@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@nextcloud/axios": "^2.5.0",
+    "@nextcloud/l10n": "^3.4.1",
     "@nextcloud/router": "^3.0.0",
     "dompurify": "^3.4.10",
     "highlight.js": "^11.9.0",

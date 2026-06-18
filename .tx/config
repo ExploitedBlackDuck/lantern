@@ -1,0 +1,10 @@
+[main]
+host = https://www.transifex.com
+
+# Lantern is translated through the app maintainer's own Transifex project.
+# `make l10n` extracts the source template; the maintainer pushes/pulls with `tx`.
+[lantern.lantern]
+file_filter        = translationfiles/<lang>/lantern.po
+source_file        = translationfiles/templates/lantern.pot
+source_lang        = en
+type               = PO
