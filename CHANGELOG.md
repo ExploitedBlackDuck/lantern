@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.3.0 — Hardening pass (2026-06-18)
+
+Robustness, scale, and App-Store readiness — no new sources or write capability.
+Each item was live-verified on a throwaway Nextcloud 34 container.
+
+- **Real-repo edge cases.** Git LFS pointer files are detected and labelled as
+  LFS objects instead of rendering the pointer text (or a broken image) as
+  content; submodules render as a submodule reference rather than a broken
+  folder. A pre-existing CSRF `412` on the raw endpoint (which broke image
+  preview and binary downloads) was fixed with `#[NoCSRFRequired]`.
+- **Caching.** A short-TTL caching layer (`CachingRepoProvider` over Nextcloud's
+  `ICache`) memoises tree/blob/commit/ref/diff/blame/search reads so repeated
+  views don't re-fork `git` or re-hit forge rate limits. Keys are namespaced per
+  user (no cross-user leakage); raw byte streams, oversized blobs/diffs, and
+  errors are never cached. No-ops safely without Redis/APCu.
+- **Internationalization.** The app is now translation-ready: front-end strings
+  use `t()`/`n()` and PHP uses `$l->t()`; `make l10n` extracts the source
+  template; locales drop into `l10n/` with no code changes. Ships English.
+- **Accessibility.** Syntax-highlight colors meet WCAG AA on both the light and
+  dark code backgrounds, keyed off Nextcloud's selected theme (not just the OS
+  preference). axe reports zero critical/serious violations on the tree and file
+  views in both themes.
+
 ## 2.2.2 — Full-width fill + screenshots (2026-06-14)
 
 - **Full-width layout.** Nextcloud's `#content` is a flex row; `#lantern` was a
