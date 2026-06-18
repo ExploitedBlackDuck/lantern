@@ -39,18 +39,18 @@ export default {
 
 <template>
 	<div v-if="refs.length" class="lantern-refpicker">
-		<label for="lantern-ref-select" class="lantern-refpicker-label">Branch / tag</label>
+		<label for="lantern-ref-select" class="lantern-refpicker-label">{{ t('Branch / tag') }}</label>
 		<select
 			id="lantern-ref-select"
 			class="lantern-refpicker-select"
 			:value="currentRef"
 			@change="$emit('select', $event.target.value)">
-			<optgroup v-if="branches.length" label="Branches">
+			<optgroup v-if="branches.length" :label="t('Branches')">
 				<option v-for="r in branches" :key="'b/' + r.name" :value="r.name">
-					{{ r.name }}{{ r.isDefault ? ' (default)' : '' }}
+					{{ r.name }}{{ r.isDefault ? ' ' + t('(default)') : '' }}
 				</option>
 			</optgroup>
-			<optgroup v-if="tags.length" label="Tags">
+			<optgroup v-if="tags.length" :label="t('Tags')">
 				<option v-for="r in tags" :key="'t/' + r.name" :value="r.name">{{ r.name }}</option>
 			</optgroup>
 		</select>

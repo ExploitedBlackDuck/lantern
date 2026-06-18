@@ -21,6 +21,7 @@ class GitAvailable implements ISetupCheck {
 	public function __construct(
 		private readonly IAppConfig $appConfig,
 		private readonly GitBinary $git,
+		private readonly \OCP\IL10N $l,
 	) {
 	}
 
@@ -29,7 +30,7 @@ class GitAvailable implements ISetupCheck {
 	}
 
 	public function getName(): string {
-		return 'Lantern: git binary availability';
+		return $this->l->t('Lantern: git binary availability');
 	}
 
 	public function run(): SetupResult {
@@ -43,15 +44,20 @@ class GitAvailable implements ISetupCheck {
 		}
 
 		if ($res !== null && $res->ok()) {
-			return SetupResult::success('git is available (' . trim($res->stdout) . ').');
+			return SetupResult::success($this->l->t('git is available (%1$s).', [trim($res->stdout)]));
 		}
 
-		$where = $configured !== '' ? ('the configured path "' . $configured . '"') : 'the server PATH';
+		$where = $configured !== ''
+			? $this->l->t('the configured path "%1$s"', [$configured])
+			: $this->l->t('the server PATH');
 		return SetupResult::error(
-			'Lantern could not run git from ' . $where . '. The git binary must be '
-			. 'installed and reachable by the web-server user. Note: the official '
-			. 'Nextcloud Docker image does not include git — install it, then set an '
-			. 'absolute git path in Lantern\'s admin settings if it is not on PATH.',
+			$this->l->t(
+				'Lantern could not run git from %1$s. The git binary must be installed and '
+				. 'reachable by the web-server user. Note: the official Nextcloud Docker image '
+				. 'does not include git — install it, then set an absolute git path in Lantern\'s '
+				. 'admin settings if it is not on PATH.',
+				[$where],
+			),
 		);
 	}
 }

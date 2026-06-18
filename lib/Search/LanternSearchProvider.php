@@ -35,6 +35,7 @@ class LanternSearchProvider implements IProvider {
 		private readonly RepoProviderManager $providers,
 		private readonly IGroupManager $groupManager,
 		private readonly IURLGenerator $url,
+		private readonly \OCP\IL10N $l,
 	) {
 	}
 
@@ -43,7 +44,7 @@ class LanternSearchProvider implements IProvider {
 	}
 
 	public function getName(): string {
-		return 'Lantern';
+		return $this->l->t('Lantern');
 	}
 
 	public function getOrder(string $route, array $routeParameters): int {

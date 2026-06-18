@@ -1,5 +1,6 @@
 <script>
 import { fetchBlob, fetchBlame, rawUrl } from '../api.js'
+import { t } from '../l10n.js'
 // Only the tiny hljs CORE is in the main bundle; each language is a separate
 // chunk pulled in on demand (see ensureLanguage). This trims the main bundle
 // substantially versus importing highlight.js/lib/common (~35 languages).
@@ -233,7 +234,7 @@ export default {
 				this.parseHash()
 				this.scrollToActive()
 			} catch (e) {
-				this.error = 'Could not load this file.'
+				this.error = t('Could not load this file.')
 			} finally {
 				this.loading = false
 			}
@@ -248,16 +249,16 @@ export default {
 			<h3>{{ path }}</h3>
 			<span class="lantern-blob-actions">
 				<button v-if="!isImage" type="button" class="lantern-link" @click="toggleBlame">
-					{{ blameOn ? 'Hide blame' : 'Blame' }}
+					{{ blameOn ? t('Hide blame') : t('Blame') }}
 				</button>
 				<button v-if="activeStart" type="button" class="lantern-link" @click="copyPermalink">
-					{{ copied ? 'Link copied' : 'Copy link to lines' }}
+					{{ copied ? t('Link copied') : t('Copy link to lines') }}
 				</button>
-				<a class="lantern-link" :href="downloadHref">Download</a>
+				<a class="lantern-link" :href="downloadHref">{{ t('Download') }}</a>
 			</span>
 		</div>
 
-		<div v-if="loading" class="lantern-empty">Loading…</div>
+		<div v-if="loading" class="lantern-empty">{{ t('Loading…') }}</div>
 		<div v-else-if="error" class="lantern-empty">{{ error }}</div>
 
 		<div v-else-if="isImage" class="lantern-image-wrap">
@@ -266,15 +267,14 @@ export default {
 
 		<template v-else-if="blob">
 			<div v-if="blob.lfs" class="lantern-binary">
-				Stored with Git LFS ({{ blob.lfsSize }} bytes). Lantern references large
-				objects rather than fetching them — <a class="lantern-link" :href="downloadHref">download the pointer</a>.
+				{{ t('Stored with Git LFS ({n} bytes). Lantern references large objects rather than fetching them —', { n: blob.lfsSize }) }} <a class="lantern-link" :href="downloadHref">{{ t('download the pointer') }}</a>.
 			</div>
 			<div v-else-if="blob.binary" class="lantern-binary">
-				Binary file ({{ blob.size }} bytes) — <a class="lantern-link" :href="downloadHref">download</a>.
+				{{ t('Binary file ({n} bytes) —', { n: blob.size }) }} <a class="lantern-link" :href="downloadHref">{{ t('download') }}</a>.
 			</div>
 			<div v-else-if="blob.truncated" class="lantern-binary">
-				File too large to display inline ({{ blob.size }} bytes) —
-				<a class="lantern-link" :href="downloadHref">download</a>.
+				{{ t('File too large to display inline ({n} bytes) —', { n: blob.size }) }}
+				<a class="lantern-link" :href="downloadHref">{{ t('download') }}</a>.
 			</div>
 			<ol v-else class="lantern-code lantern-codelines" :class="{ 'has-blame': blameOn }">
 				<li

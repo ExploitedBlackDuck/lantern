@@ -1,14 +1,14 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the Lantern package.
+# This file is distributed under the same license as the lantern package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Lantern\n"
+"Project-Id-Version: lantern\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-18 06:03-0400\n"
+"POT-Creation-Date: 2026-06-18 06:41-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,409 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: src/App.vue:90
+msgid "Could not load repositories."
+msgstr ""
+
+#: src/App.vue:216 src/components/TreeBrowser.vue:98
+#: src/components/CommitList.vue:136 src/components/CommitList.vue:176
+#: src/components/BlobViewer.vue:261
+msgid "Loading…"
+msgstr ""
+
+#: src/App.vue:224
+msgid "Searching all repositories…"
+msgstr ""
+
+#: src/App.vue:227
+msgid "{count} repository with matches"
+msgid_plural "{count} repositories with matches"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/App.vue:228
+msgid "for “{query}” (searched {searched})"
+msgstr ""
+
+#: src/App.vue:229
+msgid "— more repos not searched (limit reached)"
+msgstr ""
+
+#: src/App.vue:230 src/App.vue:289
+msgid "Clear"
+msgstr ""
+
+#: src/App.vue:232
+msgid "No matches."
+msgstr ""
+
+#: src/App.vue:250
+msgid "Files"
+msgstr ""
+
+#: src/App.vue:251 src/components/CommitList.vue:135
+msgid "History"
+msgstr ""
+
+#: src/App.vue:284
+msgid "Searching…"
+msgstr ""
+
+#: src/App.vue:288
+msgid "result"
+msgid_plural "results"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/App.vue:288
+msgid "for “{query}”"
+msgstr ""
+
+#: src/components/TreeBrowser.vue:48
+msgid "Could not load this directory."
+msgstr ""
+
+#: src/components/TreeBrowser.vue:100
+msgid "This repository is empty."
+msgstr ""
+
+#: src/components/TreeBrowser.vue:104
+msgid ".."
+msgstr ""
+
+#: src/components/TreeBrowser.vue:116
+msgid "submodule"
+msgstr ""
+
+#: src/components/AdminApp.vue:41
+msgid "Testing…"
+msgstr ""
+
+#: src/components/AdminApp.vue:49
+msgid "Test failed."
+msgstr ""
+
+#: src/components/AdminApp.vue:68
+msgid "Every repository needs an id, a name and a path."
+msgstr ""
+
+#: src/components/AdminApp.vue:73
+msgid "Repository ids must be unique."
+msgstr ""
+
+#: src/components/AdminApp.vue:77
+msgid "Saving…"
+msgstr ""
+
+#: src/components/AdminApp.vue:90
+msgid "{n} repository"
+msgid_plural "{n} repositories"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/components/AdminApp.vue:90
+msgid "Saved ({repos})."
+msgstr ""
+
+#: src/components/AdminApp.vue:92
+msgid "Save failed."
+msgstr ""
+
+#: src/components/AdminApp.vue:106
+msgid "Id"
+msgstr ""
+
+#: src/components/AdminApp.vue:107
+msgid "Display name"
+msgstr ""
+
+#: src/components/AdminApp.vue:108
+msgid "Path on this server"
+msgstr ""
+
+#: src/components/AdminApp.vue:109
+msgid "Restrict to groups"
+msgstr ""
+
+#: src/components/AdminApp.vue:132
+msgid "Test path"
+msgstr ""
+
+#: src/components/AdminApp.vue:134
+msgid "Remove"
+msgstr ""
+
+#: src/components/AdminApp.vue:138
+msgid "No repositories yet — add one below."
+msgstr ""
+
+#: src/components/AdminApp.vue:143
+msgid "+ Add repository"
+msgstr ""
+
+#: src/components/AdminApp.vue:146
+msgid "Allowed base directory (optional)"
+msgstr ""
+
+#: src/components/AdminApp.vue:148
+msgid "If set, every repository path must sit inside this directory."
+msgstr ""
+
+#: src/components/AdminApp.vue:152
+msgid "Git binary path (optional)"
+msgstr ""
+
+#: src/components/AdminApp.vue:154
+msgid "Leave blank to use"
+msgstr ""
+
+#: src/components/AdminApp.vue:154
+msgid ""
+"on the server's PATH. Set an absolute path if git isn't on PATH (e.g. in a "
+"container)."
+msgstr ""
+
+#: src/components/AdminApp.vue:157
+msgid "Save"
+msgstr ""
+
+#: src/components/ReadmeView.vue:70
+msgid "README is too large to display inline."
+msgstr ""
+
+#: src/components/ReadmeView.vue:71
+msgid "README could not be displayed."
+msgstr ""
+
+#: src/components/ReadmeView.vue:80
+msgid "Could not load README."
+msgstr ""
+
+#: src/components/ReadmeView.vue:91
+msgid "Loading README…"
+msgstr ""
+
+#: src/components/ReadmeView.vue:96
+msgid "Select a file to view its contents."
+msgstr ""
+
+#: src/components/CommitList.vue:46
+msgid "Could not load history."
+msgstr ""
+
+#: src/components/CommitList.vue:58
+msgid "Could not load more history."
+msgstr ""
+
+#: src/components/CommitList.vue:82
+msgid "Could not load diff."
+msgstr ""
+
+#: src/components/CommitList.vue:110
+msgid "No differences."
+msgstr ""
+
+#: src/components/CommitList.vue:112
+msgid "Could not load comparison."
+msgstr ""
+
+#: src/components/CommitList.vue:138
+msgid "No commits."
+msgstr ""
+
+#: src/components/CommitList.vue:141
+msgid "Comparing from"
+msgstr ""
+
+#: src/components/CommitList.vue:141
+msgid "pick another commit's"
+msgstr ""
+
+#: src/components/CommitList.vue:142
+msgid "“compare”"
+msgstr ""
+
+#: src/components/CommitList.vue:142
+msgid "to diff against it."
+msgstr ""
+
+#: src/components/CommitList.vue:143
+msgid "Cancel"
+msgstr ""
+
+#: src/components/CommitList.vue:148
+msgid "Diff"
+msgstr ""
+
+#: src/components/CommitList.vue:149
+msgid "Close"
+msgstr ""
+
+#: src/components/CommitList.vue:151
+msgid "Loading comparison…"
+msgstr ""
+
+#: src/components/CommitList.vue:161
+msgid "hide diff"
+msgstr ""
+
+#: src/components/CommitList.vue:161
+msgid "diff"
+msgstr ""
+
+#: src/components/CommitList.vue:165
+msgid "compare"
+msgstr ""
+
+#: src/components/CommitList.vue:166
+msgid "base"
+msgstr ""
+
+#: src/components/CommitList.vue:167
+msgid "compare to this"
+msgstr ""
+
+#: src/components/CommitList.vue:170
+msgid "Loading diff…"
+msgstr ""
+
+#: src/components/CommitList.vue:176
+msgid "Load more"
+msgstr ""
+
+#: src/components/GlobalSearchBox.vue:23
+msgid "Search all repositories"
+msgstr ""
+
+#: src/components/GlobalSearchBox.vue:31 src/components/SearchBox.vue:31
+msgid "Go"
+msgstr ""
+
+#: src/components/RepoList.vue:14
+msgid "Repositories"
+msgstr ""
+
+#: src/components/SearchBox.vue:23
+msgid "Search this repository"
+msgstr ""
+
+#: src/components/BlobViewer.vue:237
+msgid "Could not load this file."
+msgstr ""
+
+#: src/components/BlobViewer.vue:252
+msgid "Hide blame"
+msgstr ""
+
+#: src/components/BlobViewer.vue:252
+msgid "Blame"
+msgstr ""
+
+#: src/components/BlobViewer.vue:255
+msgid "Link copied"
+msgstr ""
+
+#: src/components/BlobViewer.vue:255
+msgid "Copy link to lines"
+msgstr ""
+
+#: src/components/BlobViewer.vue:257
+msgid "Download"
+msgstr ""
+
+#: src/components/BlobViewer.vue:270
+msgid ""
+"Stored with Git LFS ({n} bytes). Lantern references large objects rather "
+"than fetching them —"
+msgstr ""
+
+#: src/components/BlobViewer.vue:270
+msgid "download the pointer"
+msgstr ""
+
+#: src/components/BlobViewer.vue:273
+msgid "Binary file ({n} bytes) —"
+msgstr ""
+
+#: src/components/BlobViewer.vue:273 src/components/BlobViewer.vue:277
+msgid "download"
+msgstr ""
+
+#: src/components/BlobViewer.vue:276
+msgid "File too large to display inline ({n} bytes) —"
+msgstr ""
+
+#: src/components/RefPicker.vue:42
+msgid "Branch / tag"
+msgstr ""
+
+#: src/components/RefPicker.vue:50
+msgid "(default)"
+msgstr ""
+
+#: src/components/ForgeRepoManager.vue:39
+msgid "Enter the project path (group/.../project)."
+msgstr ""
+
+#: src/components/ForgeRepoManager.vue:39
+msgid "Enter both an owner and a repository name."
+msgstr ""
+
+#: src/components/ForgeRepoManager.vue:43 src/components/MyReposManager.vue:35
+msgid "Adding…"
+msgstr ""
+
+#: src/components/ForgeRepoManager.vue:52 src/components/MyReposManager.vue:45
+msgid "Could not add that repository."
+msgstr ""
+
+#: src/components/ForgeRepoManager.vue:78 src/components/MyReposManager.vue:71
+msgid "− Cancel"
+msgstr ""
+
+#: src/components/ForgeRepoManager.vue:78
+msgid "+ Add a GitHub or GitLab repository"
+msgstr ""
+
+#: src/components/ForgeRepoManager.vue:83
+msgid "Forge"
+msgstr ""
+
+#: src/components/ForgeRepoManager.vue:102 src/components/MyReposManager.vue:79
+msgid "Add"
+msgstr ""
+
+#: src/components/ForgeRepoManager.vue:105
+msgid ""
+"The token is stored encrypted and used only to read this repo. A public repo "
+"can be added without one."
+msgstr ""
+
+#: src/components/MyReposManager.vue:23
+msgid "Checking…"
+msgstr ""
+
+#: src/components/MyReposManager.vue:28
+msgid "Could not check that path."
+msgstr ""
+
+#: src/components/MyReposManager.vue:33
+msgid "Enter a folder path inside your Files."
+msgstr ""
+
+#: src/components/MyReposManager.vue:65
+msgid "(unavailable)"
+msgstr ""
+
+#: src/components/MyReposManager.vue:71
+msgid "+ Add a repo from your Files"
+msgstr ""
+
+#: src/components/MyReposManager.vue:78
+msgid "Test"
+msgstr ""
 
 #: src/components/EmptyState.vue:20
 msgid "Welcome to Lantern"
@@ -63,6 +466,37 @@ msgid ""
 "read-only and never modifies a repo."
 msgstr ""
 
-#: lib/Settings/AdminSection.php:24
+#: lib/Settings/AdminSection.php:24 lib/Search/LanternSearchProvider.php:47
 msgid "Lantern"
+msgstr ""
+
+#: lib/SetupCheck/GitAvailable.php:33
+msgid "Lantern: git binary availability"
+msgstr ""
+
+#: lib/SetupCheck/GitAvailable.php:47
+#, php-format
+msgid "git is available (%1$s)."
+msgstr ""
+
+#: lib/SetupCheck/GitAvailable.php:51
+#, php-format
+msgid "the configured path \"%1$s\""
+msgstr ""
+
+#: lib/SetupCheck/GitAvailable.php:52
+msgid "the server PATH"
+msgstr ""
+
+#: lib/SetupCheck/GitAvailable.php:55
+#, php-format
+msgid ""
+"Lantern could not run git from %1$s. The git binary must be installed and "
+"reachable by the web-server user. Note: the official Nextcloud Docker image "
+"does not include git — install it, then set an absolute git path in "
+"Lantern's admin settings if it is not on PATH."
+msgstr ""
+
+#: lib/Dashboard/RecentCommitsWidget.php:44
+msgid "Lantern — recent commits"
 msgstr ""

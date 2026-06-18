@@ -20,15 +20,15 @@ export default {
 
 <template>
 	<form class="lantern-searchbox" role="search" @submit.prevent="submit">
-		<label for="lantern-search-input" class="lantern-refpicker-label">Search this repository</label>
+		<label for="lantern-search-input" class="lantern-refpicker-label">{{ t('Search this repository') }}</label>
 		<div class="lantern-searchbox-row">
 			<input
 				id="lantern-search-input"
 				v-model="query"
 				type="search"
-				placeholder="Find in files…"
+				:placeholder="t('Find in files…')"
 				@search="query === '' && clear()">
-			<button type="submit" class="primary">Go</button>
+			<button type="submit" class="primary">{{ t('Go') }}</button>
 		</div>
 	</form>
 </template>
