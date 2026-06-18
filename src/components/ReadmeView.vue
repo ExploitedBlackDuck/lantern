@@ -1,5 +1,6 @@
 <script>
 import { fetchBlob } from '../api.js'
+import { t, n } from '../l10n.js'
 
 // markdown-it + dompurify (~150 KiB together) are loaded on demand the first
 // time a Markdown README is rendered, keeping them out of the main bundle.
@@ -66,8 +67,8 @@ export default {
 				const blob = data.blob
 				if (!blob || blob.binary || blob.content === null) {
 					this.note = blob && blob.truncated
-						? 'README is too large to display inline.'
-						: 'README could not be displayed.'
+						? t('README is too large to display inline.')
+						: t('README could not be displayed.')
 					return
 				}
 				if (MD_RE.test(r.name)) {
@@ -76,7 +77,7 @@ export default {
 					this.plain = blob.content
 				}
 			} catch (e) {
-				this.note = 'Could not load README.'
+				this.note = t('Could not load README.')
 			} finally {
 				this.loading = false
 			}
@@ -87,12 +88,12 @@ export default {
 
 <template>
 	<div class="lantern-readme-wrap">
-		<div v-if="loading" class="lantern-empty">Loading README…</div>
+		<div v-if="loading" class="lantern-empty">{{ t('Loading README…') }}</div>
 		<div v-else-if="note" class="lantern-empty">{{ note }}</div>
 		<article v-else-if="html" class="lantern-readme" v-html="html" />
 		<pre v-else-if="plain" class="lantern-code lantern-readme-plain">{{ plain }}</pre>
 		<div v-else class="lantern-empty">
-			Select a file to view its contents.
+			{{ t('Select a file to view its contents.') }}
 		</div>
 	</div>
 </template>

@@ -11,6 +11,7 @@ import GlobalSearchBox from './components/GlobalSearchBox.vue'
 import MyReposManager from './components/MyReposManager.vue'
 import ForgeRepoManager from './components/ForgeRepoManager.vue'
 import { fetchRepos, searchRepo, searchAllRepos } from './api.js'
+import { t, n } from './l10n.js'
 
 export default {
 	name: 'App',
@@ -86,7 +87,7 @@ export default {
 					this.activeRepo = null
 				}
 			} catch (e) {
-				this.error = 'Could not load repositories.'
+				this.error = t('Could not load repositories.')
 			}
 		},
 		onReposChanged() {
@@ -212,7 +213,7 @@ export default {
 		</aside>
 
 		<main class="lantern-main">
-			<div v-if="loading" class="lantern-empty">Loading…</div>
+			<div v-if="loading" class="lantern-empty">{{ t('Loading…') }}</div>
 			<div v-else-if="error" class="lantern-empty">{{ error }}</div>
 			<EmptyState
 				v-else-if="!repos.length"
@@ -220,15 +221,15 @@ export default {
 				:settings-url="settingsUrl" />
 
 			<div v-else-if="view === 'globalsearch'" class="lantern-searchresults">
-				<div v-if="globalSearching" class="lantern-empty">Searching all repositories…</div>
+				<div v-if="globalSearching" class="lantern-empty">{{ t('Searching all repositories…') }}</div>
 				<template v-else>
 					<p class="lantern-search-summary">
-						{{ globalResults.length }} repositor{{ globalResults.length === 1 ? 'y' : 'ies' }} with matches
-						for “{{ globalQuery }}” (searched {{ globalSearchedRepos }})
-						<span v-if="globalTruncated"> — more repos not searched (limit reached)</span>
-						<button type="button" class="lantern-link" @click="onGlobalSearch('')">Clear</button>
+						{{ n('{count} repository with matches', '{count} repositories with matches', globalResults.length, { count: globalResults.length }) }}
+						{{ t('for “{query}” (searched {searched})', { query: globalQuery, searched: globalSearchedRepos }) }}
+						<span v-if="globalTruncated"> {{ t('— more repos not searched (limit reached)') }}</span>
+						<button type="button" class="lantern-link" @click="onGlobalSearch('')">{{ t('Clear') }}</button>
 					</p>
-					<div v-if="!globalResults.length" class="lantern-empty">No matches.</div>
+					<div v-if="!globalResults.length" class="lantern-empty">{{ t('No matches.') }}</div>
 					<div v-for="g in globalResults" :key="g.repo.id" class="lantern-global-group">
 						<h3 class="lantern-global-repo">{{ g.repo.name }} <span class="lantern-myrepos-invalid">({{ g.repo.provider }})</span></h3>
 						<ul class="lantern-tree" role="list">
@@ -246,8 +247,8 @@ export default {
 			<template v-else-if="activeRepo">
 				<div class="lantern-toolbar">
 					<div class="lantern-tabs">
-						<button :class="{ primary: view === 'tree' }" @click="showTree">Files</button>
-						<button :class="{ primary: view === 'history' }" @click="showHistory">History</button>
+						<button :class="{ primary: view === 'tree' }" @click="showTree">{{ t('Files') }}</button>
+						<button :class="{ primary: view === 'history' }" @click="showHistory">{{ t('History') }}</button>
 					</div>
 					<RefPicker
 						:repo="activeRepo"
@@ -280,12 +281,12 @@ export default {
 				</template>
 
 				<div v-else-if="view === 'search'" class="lantern-searchresults">
-					<div v-if="searching" class="lantern-empty">Searching…</div>
+					<div v-if="searching" class="lantern-empty">{{ t('Searching…') }}</div>
 					<template v-else>
 						<p class="lantern-search-summary">
 							{{ searchResults.length }}{{ searchResults.length === 200 ? '+' : '' }}
-							result{{ searchResults.length === 1 ? '' : 's' }} for “{{ searchQuery }}”
-							<button type="button" class="lantern-link" @click="onSearch('')">Clear</button>
+							{{ n('result', 'results', searchResults.length) }} {{ t('for “{query}”', { query: searchQuery }) }}
+							<button type="button" class="lantern-link" @click="onSearch('')">{{ t('Clear') }}</button>
 						</p>
 						<ul class="lantern-tree" role="list">
 							<li v-for="(m, idx) in searchResults" :key="idx" class="lantern-search-hit">

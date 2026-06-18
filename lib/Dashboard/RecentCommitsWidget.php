@@ -32,6 +32,7 @@ class RecentCommitsWidget implements IAPIWidget {
 		private readonly IGroupManager $groupManager,
 		private readonly IUserManager $userManager,
 		private readonly IURLGenerator $url,
+		private readonly \OCP\IL10N $l,
 	) {
 	}
 
@@ -40,7 +41,7 @@ class RecentCommitsWidget implements IAPIWidget {
 	}
 
 	public function getTitle(): string {
-		return 'Lantern — recent commits';
+		return $this->l->t('Lantern — recent commits');
 	}
 
 	public function getOrder(): int {

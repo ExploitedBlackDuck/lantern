@@ -1,5 +1,6 @@
 <script>
 import { fetchCommits, fetchDiff, fetchRangeDiff } from '../api.js'
+import { t } from '../l10n.js'
 
 export default {
 	name: 'CommitList',
@@ -42,7 +43,7 @@ export default {
 				this.commits = data.commits
 				this.hasMore = !!data.hasMore
 			} catch (e) {
-				this.error = 'Could not load history.'
+				this.error = t('Could not load history.')
 			} finally {
 				this.loading = false
 			}
@@ -54,7 +55,7 @@ export default {
 				this.commits = this.commits.concat(data.commits)
 				this.hasMore = !!data.hasMore
 			} catch (e) {
-				this.error = 'Could not load more history.'
+				this.error = t('Could not load more history.')
 			} finally {
 				this.loading = false
 			}
@@ -78,7 +79,7 @@ export default {
 				const text = await fetchDiff(this.repo.id, hash)
 				this.diffLines = this.classifyDiff(text)
 			} catch (e) {
-				this.diffLines = [{ cls: 'meta', text: 'Could not load diff.' }]
+				this.diffLines = [{ cls: 'meta', text: t('Could not load diff.') }]
 			} finally {
 				this.diffLoading = false
 			}
@@ -106,9 +107,9 @@ export default {
 			this.rangeLines = []
 			try {
 				const text = await fetchRangeDiff(this.repo.id, base, head)
-				this.rangeLines = text ? this.classifyDiff(text) : [{ cls: 'meta', text: 'No differences.' }]
+				this.rangeLines = text ? this.classifyDiff(text) : [{ cls: 'meta', text: t('No differences.') }]
 			} catch (e) {
-				this.rangeLines = [{ cls: 'meta', text: 'Could not load comparison.' }]
+				this.rangeLines = [{ cls: 'meta', text: t('Could not load comparison.') }]
 			} finally {
 				this.rangeLoading = false
 			}
@@ -131,23 +132,23 @@ export default {
 
 <template>
 	<div class="lantern-commitlist">
-		<h3>History<span v-if="path"> · {{ path }}</span></h3>
-		<div v-if="loading" class="lantern-empty">Loading…</div>
+		<h3>{{ t('History') }}<span v-if="path"> · {{ path }}</span></h3>
+		<div v-if="loading" class="lantern-empty">{{ t('Loading…') }}</div>
 		<div v-else-if="error" class="lantern-empty">{{ error }}</div>
-		<div v-else-if="!commits.length" class="lantern-empty">No commits.</div>
+		<div v-else-if="!commits.length" class="lantern-empty">{{ t('No commits.') }}</div>
 
 		<p v-if="compareBase" class="lantern-compare-banner">
-			Comparing from <code>{{ shortHash(compareBase) }}</code> — pick another commit's
-			<strong>“compare”</strong> to diff against it.
-			<button type="button" class="lantern-link" @click="cancelCompare">Cancel</button>
+			{{ t('Comparing from') }} <code>{{ shortHash(compareBase) }}</code> — {{ t('pick another commit\'s') }}
+			<strong>{{ t('“compare”') }}</strong> {{ t('to diff against it.') }}
+			<button type="button" class="lantern-link" @click="cancelCompare">{{ t('Cancel') }}</button>
 		</p>
 
 		<div v-if="rangeOpen" class="lantern-diff lantern-range-diff">
 			<p class="lantern-compare-banner">
-				Diff <code>{{ rangeBase }}</code> … <code>{{ rangeHead }}</code>
-				<button type="button" class="lantern-link" @click="rangeOpen = false">Close</button>
+				{{ t('Diff') }} <code>{{ rangeBase }}</code> … <code>{{ rangeHead }}</code>
+				<button type="button" class="lantern-link" @click="rangeOpen = false">{{ t('Close') }}</button>
 			</p>
-			<div v-if="rangeLoading" class="lantern-empty">Loading comparison…</div>
+			<div v-if="rangeLoading" class="lantern-empty">{{ t('Loading comparison…') }}</div>
 			<pre v-else class="lantern-code lantern-diff-pre"><template v-for="(l, i) in rangeLines" :key="i"><span :class="'dl-' + l.cls">{{ l.text }}</span>
 </template></pre>
 		</div>
@@ -157,22 +158,22 @@ export default {
 				<div class="subject">{{ c.subject }}</div>
 				<div class="meta">
 					<code>{{ c.shortHash }}</code> · {{ c.authorName }} · {{ when(c.date) }}
-					<span class="lantern-commit-diffhint">{{ openHash === c.hash ? '▾ hide diff' : '▸ diff' }}</span>
+					<span class="lantern-commit-diffhint">{{ openHash === c.hash ? '▾ ' + t('hide diff') : '▸ ' + t('diff') }}</span>
 				</div>
 			</button>
 			<div class="lantern-commit-actions">
-				<button v-if="!compareBase" type="button" class="lantern-link" @click="setBase(c.hash)">⇄ compare</button>
-				<span v-else-if="compareBase === c.hash" class="lantern-compare-base">base ✓</span>
-				<button v-else type="button" class="lantern-link" @click="compareTo(c.hash)">⇄ compare to this</button>
+				<button v-if="!compareBase" type="button" class="lantern-link" @click="setBase(c.hash)">⇄ {{ t('compare') }}</button>
+				<span v-else-if="compareBase === c.hash" class="lantern-compare-base">{{ t('base') }} ✓</span>
+				<button v-else type="button" class="lantern-link" @click="compareTo(c.hash)">⇄ {{ t('compare to this') }}</button>
 			</div>
 			<div v-if="openHash === c.hash" class="lantern-diff">
-				<div v-if="diffLoading" class="lantern-empty">Loading diff…</div>
+				<div v-if="diffLoading" class="lantern-empty">{{ t('Loading diff…') }}</div>
 				<pre v-else class="lantern-code lantern-diff-pre"><template v-for="(l, i) in diffLines" :key="i"><span :class="'dl-' + l.cls">{{ l.text }}</span>
 </template></pre>
 			</div>
 		</div>
 		<button v-if="hasMore" type="button" class="lantern-loadmore" :disabled="loading" @click="loadMore">
-			{{ loading ? 'Loading…' : 'Load more' }}
+			{{ loading ? t('Loading…') : t('Load more') }}
 		</button>
 	</div>
 </template>

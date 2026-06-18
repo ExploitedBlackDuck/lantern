@@ -11,7 +11,7 @@ export default {
 
 <template>
 	<div class="lantern-repolist">
-		<h3 style="margin:4px 8px;">Repositories</h3>
+		<h3 style="margin:4px 8px;">{{ t('Repositories') }}</h3>
 		<ul role="list" class="lantern-tree">
 			<li v-for="repo in repos" :key="repo.id">
 				<button

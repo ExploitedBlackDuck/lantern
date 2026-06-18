@@ -20,15 +20,15 @@ export default {
 
 <template>
 	<form class="lantern-searchbox lantern-globalsearch" role="search" @submit.prevent="submit">
-		<label for="lantern-global-search-input" class="lantern-refpicker-label">Search all repositories</label>
+		<label for="lantern-global-search-input" class="lantern-refpicker-label">{{ t('Search all repositories') }}</label>
 		<div class="lantern-searchbox-row">
 			<input
 				id="lantern-global-search-input"
 				v-model="query"
 				type="search"
-				placeholder="Find across every repo…"
+				:placeholder="t('Find across every repo…')"
 				@search="query === '' && clear()">
-			<button type="submit" class="primary">Go</button>
+			<button type="submit" class="primary">{{ t('Go') }}</button>
 		</div>
 	</form>
 </template>

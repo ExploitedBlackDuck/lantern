@@ -1,5 +1,6 @@
 <script>
 import { fetchTree } from '../api.js'
+import { t, n } from '../l10n.js'
 
 export default {
 	name: 'TreeBrowser',
@@ -44,7 +45,7 @@ export default {
 				this.$emit('ref-resolved', data.ref)
 				this.$emit('entries', this.entries)
 			} catch (e) {
-				this.error = 'Could not load this directory.'
+				this.error = t('Could not load this directory.')
 			} finally {
 				this.loading = false
 			}
@@ -77,7 +78,7 @@ export default {
 
 <template>
 	<div class="lantern-treebrowser">
-		<nav class="lantern-breadcrumb" aria-label="Path">
+		<nav class="lantern-breadcrumb" :aria-label="t('Path')">
 			<button
 				v-if="crumbs.length"
 				type="button"
@@ -94,13 +95,13 @@ export default {
 				<span v-else class="lantern-crumb-current" aria-current="page">{{ c.label }}</span>
 			</template>
 		</nav>
-		<div v-if="loading" class="lantern-empty">Loading…</div>
+		<div v-if="loading" class="lantern-empty">{{ t('Loading…') }}</div>
 		<div v-else-if="error" class="lantern-empty">{{ error }}</div>
-		<div v-else-if="!entries.length && !path" class="lantern-empty">This repository is empty.</div>
+		<div v-else-if="!entries.length && !path" class="lantern-empty">{{ t('This repository is empty.') }}</div>
 		<ul v-else class="lantern-tree" role="list">
 			<li v-if="path">
 				<button type="button" class="lantern-tree-row" @click="goUp">
-					<span class="name">..</span>
+					<span class="name">{{ t('..') }}</span>
 				</button>
 			</li>
 			<li v-for="entry in entries" :key="entry.path">
@@ -112,7 +113,7 @@ export default {
 					:disabled="entry.type === 'commit'"
 					@click="onClick(entry)">
 					<span class="name">{{ entryIcon(entry.type) }} {{ entry.name }}</span>
-					<span class="size">{{ entry.type === 'commit' ? 'submodule' : humanSize(entry.size) }}</span>
+					<span class="size">{{ entry.type === 'commit' ? t('submodule') : humanSize(entry.size) }}</span>
 				</button>
 			</li>
 		</ul>
