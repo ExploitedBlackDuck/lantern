@@ -466,55 +466,61 @@
 /* Syntax highlighting palette.
  * Instead of shipping a fixed (dark) highlight.js theme, map hljs token classes
  * to Nextcloud's themable text token for structural pieces (so comments/text
- * follow the active theme) plus a compact set of mid-tone hues chosen to stay
- * legible on BOTH light and dark backgrounds, with a prefers-color-scheme
- * override that brightens them in dark mode.
+ * follow the active theme) plus a compact set of hues that clear WCAG AA on
+ * both the light and dark code backgrounds.
  *
- * CAVEAT: the dark variant keys off @media (prefers-color-scheme: dark), which
- * follows the OS, whereas Nextcloud's dark mode is a per-user APP setting that
- * can diverge from the OS. A user on NC dark theme + light OS gets the
- * light-tuned token colors on a dark code background. This is acceptable for
- * v1; a fully native version would key off NC's own theme selector instead.
- * Tracked for v1.x alongside @nextcloud/vue adoption. */
+ * The dark palette keys off Nextcloud's OWN theme attributes (data-theme-dark /
+ * data-theme-default + prefers-color-scheme) rather than @media alone, so a
+ * user who selects NC's dark theme on a light OS still gets the dark-tuned,
+ * AA-contrast colors — and a forced NC theme always beats the OS preference. */
+/* Palette as theme-switchable custom properties: the token -> variable mapping
+ * below is written once, and only the VALUES change per theme. Light values are
+ * the default; dark values apply when Nextcloud's active theme is dark (forced),
+ * or when the user follows the system theme and the OS is dark. All values clear
+ * WCAG AA (>=4.5:1) against the respective code background. */
+.lantern-code {
+	--hl-keyword: #8959a8;
+	--hl-string: #5c7000;
+	--hl-number: #8a5d00;
+	--hl-title: #30588f;
+	--hl-variable: #c82829;
+}
+body[data-theme-dark] .lantern-code,
+body[data-theme-dark-highcontrast] .lantern-code {
+	--hl-keyword: #c594c5;
+	--hl-string: #b5bd68;
+	--hl-number: #de935f;
+	--hl-title: #81a2be;
+	--hl-variable: #e69393;
+}
+@media (prefers-color-scheme: dark) {
+	body[data-theme-default] .lantern-code {
+		--hl-keyword: #c594c5;
+		--hl-string: #b5bd68;
+		--hl-number: #de935f;
+		--hl-title: #81a2be;
+		--hl-variable: #e69393;
+	}
+}
 .lantern-code .hljs-comment,
 .lantern-code .hljs-quote { color: var(--color-text-maxcontrast); font-style: italic; }
 .lantern-code .hljs-keyword,
 .lantern-code .hljs-selector-tag,
 .lantern-code .hljs-literal,
-.lantern-code .hljs-section { color: #8959a8; }
+.lantern-code .hljs-section { color: var(--hl-keyword); }
 .lantern-code .hljs-string,
 .lantern-code .hljs-attr,
-.lantern-code .hljs-meta-string { color: #5c7000; }
+.lantern-code .hljs-meta-string { color: var(--hl-string); }
 .lantern-code .hljs-number,
 .lantern-code .hljs-symbol,
 .lantern-code .hljs-built_in,
-.lantern-code .hljs-type { color: #8a5d00; }
+.lantern-code .hljs-type { color: var(--hl-number); }
 .lantern-code .hljs-title,
 .lantern-code .hljs-name,
-.lantern-code .hljs-function .hljs-title { color: #30588f; }
+.lantern-code .hljs-function .hljs-title { color: var(--hl-title); }
 .lantern-code .hljs-variable,
 .lantern-code .hljs-regexp,
-.lantern-code .hljs-tag { color: #c82829; }
+.lantern-code .hljs-tag { color: var(--hl-variable); }
 .lantern-code .hljs-meta { color: var(--color-text-maxcontrast); }
-.lantern-code .hljs-addition { color: #5c7000; }
-.lantern-code .hljs-deletion { color: #c82829; }
-
-@media (prefers-color-scheme: dark) {
-	.lantern-code .hljs-keyword,
-	.lantern-code .hljs-selector-tag,
-	.lantern-code .hljs-literal,
-	.lantern-code .hljs-section { color: #c594c5; }
-	.lantern-code .hljs-string,
-	.lantern-code .hljs-attr,
-	.lantern-code .hljs-meta-string { color: #b5bd68; }
-	.lantern-code .hljs-number,
-	.lantern-code .hljs-symbol,
-	.lantern-code .hljs-built_in,
-	.lantern-code .hljs-type { color: #de935f; }
-	.lantern-code .hljs-title,
-	.lantern-code .hljs-name,
-	.lantern-code .hljs-function .hljs-title { color: #81a2be; }
-	.lantern-code .hljs-variable,
-	.lantern-code .hljs-regexp,
-	.lantern-code .hljs-tag { color: #cc6666; }
-}
+.lantern-code .hljs-addition { color: var(--hl-string); }
+.lantern-code .hljs-deletion { color: var(--hl-variable); }
