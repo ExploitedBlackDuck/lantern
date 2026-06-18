@@ -109,9 +109,11 @@ export default {
 	},
 	computed: {
 		isImage() {
-			// An LFS-stored image's raw endpoint returns the pointer text, not the
-			// image bytes — don't try to render it as an <img>.
-			return IMAGE_EXT.includes(this.ext) && !this.blob?.lfs
+			// Only render an <img> once the blob metadata confirms a real image and
+			// not a Git LFS pointer: an LFS-backed image's raw endpoint returns the
+			// pointer text, not image bytes, so it would render broken. Gating on a
+			// loaded blob also avoids firing the raw request before we know the type.
+			return !!this.blob && IMAGE_EXT.includes(this.ext) && !this.blob.lfs
 		},
 		ext() {
 			const dot = this.path.lastIndexOf('.')
@@ -202,12 +204,13 @@ export default {
 			this.blameOn = false
 			this.blameByLine = {}
 			try {
-				// Images are fetched as bytes by the browser via <img>, not as JSON.
-				if (this.isImage) { this.loading = false; return }
-
+				// Always fetch the blob metadata first — even for image extensions —
+				// so we can detect a Git LFS pointer (and only then decide whether to
+				// render an <img>, the LFS notice, or text). For real images the
+				// metadata is cheap: binary content is suppressed server-side.
 				const data = await fetchBlob(this.repo.id, this.refName, this.path)
 				this.blob = data.blob
-				if (!this.blob || this.blob.binary || this.blob.content === null) return
+				if (!this.blob || this.blob.lfs || this.blob.binary || this.blob.content === null) return
 
 				const content = this.blob.content
 				let html = null
