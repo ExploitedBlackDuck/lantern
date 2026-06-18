@@ -60,6 +60,81 @@ final class NullLogger implements \Psr\Log\LoggerInterface {
 	}
 }
 
+/** In-memory ICache for the caching-decorator test (see registry-stubs.php). */
+final class ArrayCache implements \OCP\ICache {
+	/** @var array<string,mixed> */
+	public array $store = [];
+	public function get($key) {
+		return $this->store[$key] ?? null;
+	}
+	public function set($key, $value, $ttl = 0): bool {
+		$this->store[$key] = $value;
+		return true;
+	}
+}
+
+/**
+ * IRepoProvider test double that counts how often each method actually runs, so
+ * a cache hit is observable as "inner not re-invoked". $blobLen sizes the blob
+ * body (to exercise the cache's size cap); $fail makes listTree throw (to prove
+ * errors are not cached).
+ */
+final class CountingProvider implements \OCA\Lantern\Provider\IRepoProvider {
+	/** @var array<string,int> */
+	public array $calls = [];
+	public int $blobLen = 3;
+	public bool $fail = false;
+	private function bump(string $m): void {
+		$this->calls[$m] = ($this->calls[$m] ?? 0) + 1;
+	}
+	public function getKey(): string {
+		return 'count';
+	}
+	public function defaultRef($repo): string {
+		$this->bump('defaultRef');
+		return 'master';
+	}
+	public function listTree($repo, $ref, $path): array {
+		$this->bump('listTree');
+		if ($this->fail) {
+			throw new RepoNotFoundException('boom');
+		}
+		return [new TreeEntry('a', 'a', 'blob', '100644', 'oid', 1)];
+	}
+	public function getBlob($repo, $ref, $path): \OCA\Lantern\Model\BlobContent {
+		$this->bump('getBlob');
+		return new \OCA\Lantern\Model\BlobContent($path, $this->blobLen, false, false, str_repeat('x', $this->blobLen));
+	}
+	public function listCommits($repo, $ref, $path, $limit, $offset = 0): array {
+		$this->bump('listCommits');
+		return [new \OCA\Lantern\Model\CommitInfo('h', 'A', 'a@x', '2026-01-01T00:00:00Z', 's')];
+	}
+	public function listRefs($repo): array {
+		$this->bump('listRefs');
+		return [new RefInfo('master', RefInfo::TYPE_BRANCH, true)];
+	}
+	public function getBlobRaw($repo, $ref, $path, $maxBytes): \OCA\Lantern\Model\RawBlob {
+		$this->bump('getBlobRaw');
+		return new \OCA\Lantern\Model\RawBlob($path, 3, 'xxx', false);
+	}
+	public function search($repo, $ref, $query, $limit): array {
+		$this->bump('search');
+		return [new SearchMatch('a', 1, 'x')];
+	}
+	public function getCommitDiff($repo, $ref): string {
+		$this->bump('getCommitDiff');
+		return 'diff --git';
+	}
+	public function getRangeDiff($repo, $baseRef, $headRef): string {
+		$this->bump('getRangeDiff');
+		return 'diff --git';
+	}
+	public function blame($repo, $ref, $path): array {
+		$this->bump('blame');
+		return [new \OCA\Lantern\Model\BlameLine(1, str_repeat('a', 40), 'A', '2026-01-01T00:00:00Z')];
+	}
+}
+
 $pass = 0;
 $fail = 0;
 $check = static function (string $label, bool $cond) use (&$pass, &$fail): void {
@@ -584,6 +659,55 @@ $check('GL mapCommits of [] is []', $GL::mapCommits([]) === []);
 $check('GL mapBlame tolerates missing commit/lines', \count($GL::mapBlame([['x' => 1], ['commit' => 'nope']])) === 0);
 $glBadCommit = $GL::mapCommits([['id' => 'x'], []]);
 $check('GL mapCommits tolerates missing fields', \count($glBadCommit) === 2 && $glBadCommit[0]->subject === '');
+
+// --- caching decorator (HARDENING §1) ---
+$cache = new ArrayCache();
+$counter = new CountingProvider();
+$cached = new \OCA\Lantern\Provider\Cache\CachingRepoProvider($counter, $cache);
+$crepo = new RepoDescriptor('c1', 'C', '/x', 'count');
+
+$t1 = $cached->listTree($crepo, 'master', '');
+$cached->listTree($crepo, 'master', '');
+$check('cache: identical listTree served from cache (inner ran once)', ($counter->calls['listTree'] ?? 0) === 1);
+$check('cache: cached value round-trips (same entry name)', $t1[0]->name === 'a');
+$cached->listTree($crepo, 'master', 'src');
+$check('cache: a different path is a distinct key (inner re-ran)', ($counter->calls['listTree'] ?? 0) === 2);
+$cached->listTree($crepo, 'dev', '');
+$check('cache: a different ref is a distinct key (inner re-ran)', ($counter->calls['listTree'] ?? 0) === 3);
+
+$b1 = $cached->getBlob($crepo, 'master', 'a.txt');
+$b2 = $cached->getBlob($crepo, 'master', 'a.txt');
+$check('cache: getBlob cached + content preserved', ($counter->calls['getBlob'] ?? 0) === 1 && $b2->content === $b1->content);
+
+// Per-user isolation is by cache prefix, but distinct repo IDs are also distinct
+// keys — one repo's cache never answers for another.
+$crepo2 = new RepoDescriptor('c2', 'C2', '/y', 'count');
+$cached->listRefs($crepo);
+$cached->listRefs($crepo);
+$cached->listRefs($crepo2);
+$check('cache: a different repo id is a distinct key', ($counter->calls['listRefs'] ?? 0) === 2);
+
+$cached->listCommits($crepo, 'master', null, 50, 0);
+$cached->listCommits($crepo, 'master', null, 50, 0);
+$cached->listCommits($crepo, 'master', null, 50, 10);
+$check('cache: listCommits keyed on pagination offset', ($counter->calls['listCommits'] ?? 0) === 2);
+
+$cached->getBlobRaw($crepo, 'master', 'a.txt', 1000);
+$cached->getBlobRaw($crepo, 'master', 'a.txt', 1000);
+$check('cache: getBlobRaw is pass-through (never cached)', ($counter->calls['getBlobRaw'] ?? 0) === 2);
+
+// Oversized blob bodies are computed but NOT cached (bounded memory).
+$counter->blobLen = \OCA\Lantern\Provider\Cache\CachingRepoProvider::MAX_CACHED_BLOB + 1;
+$cached->getBlob($crepo, 'master', 'big.txt');
+$cached->getBlob($crepo, 'master', 'big.txt');
+$check('cache: an oversized blob is not cached (inner re-ran)', ($counter->calls['getBlob'] ?? 0) === 3);
+
+// Errors are never cached: a throwing read is retried, not memoised.
+$counter->fail = true;
+$threw1 = $throws(static fn () => $cached->listTree($crepo, 'fail', ''));
+$threw2 = $throws(static fn () => $cached->listTree($crepo, 'fail', ''));
+$check('cache: a failed read is not cached (re-invoked, still throws)',
+	$threw1 && $threw2 && ($counter->calls['listTree'] ?? 0) === 5);
 
 echo "\n========================================\n";
 echo "RESULT: $pass passed, $fail failed\n";

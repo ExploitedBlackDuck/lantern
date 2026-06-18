@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\Lantern\AppInfo;
 
+use OCA\Lantern\Provider\Cache\CachingRepoProvider;
 use OCA\Lantern\Provider\Forge\GitHubProvider;
 use OCA\Lantern\Provider\Forge\GitLabProvider;
 use OCA\Lantern\Provider\IRepoProvider;
@@ -16,6 +17,8 @@ use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\IAppConfig;
+use OCP\ICacheFactory;
+use OCP\IUserSession;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -44,10 +47,19 @@ class Application extends App implements IBootstrap {
 		// (GitHub) provider slots in here behind the same IRepoProvider seam —
 		// the controllers and the entire Vue frontend are unchanged.
 		$context->registerService(RepoProviderManager::class, static function (ContainerInterface $c): RepoProviderManager {
+			// Wrap each provider in a short-TTL cache so repeated tree/blob/commit/
+			// forge reads don't re-fork git or re-hit forge rate limits. The cache
+			// prefix is namespaced per user, because forge/user-Files repo IDs are
+			// per-user and the distributed cache is shared (no cross-user leakage).
+			// createDistributed falls back to a no-op cache when no memcache is
+			// configured, so this is transparently safe without Redis/APCu.
+			$uid = $c->get(IUserSession::class)->getUser()?->getUID() ?? 'anon';
+			$cache = $c->get(ICacheFactory::class)->createDistributed('lantern/' . $uid . '/');
+			$wrap = static fn (IRepoProvider $p): IRepoProvider => new CachingRepoProvider($p, $cache);
 			return new RepoProviderManager([
-				$c->get(LocalGitProvider::class),
-				$c->get(GitHubProvider::class),
-				$c->get(GitLabProvider::class),
+				$wrap($c->get(LocalGitProvider::class)),
+				$wrap($c->get(GitHubProvider::class)),
+				$wrap($c->get(GitLabProvider::class)),
 			]);
 		});
 
