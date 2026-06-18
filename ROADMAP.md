@@ -6,16 +6,16 @@ This captures *thinking about what to build next* — the candidate features, th
 gaps (including the unglamorous operational ones), and the reasoning for
 sequencing. It is intentionally option-space, not a committed plan: direction
 (who Lantern is for) is still the owner's call. For the design-of-record see
-`docs/PROJECT_BIBLE.md`; for agent context see `CLAUDE.md`; for history see
-`journal.md`.
+`docs/PROJECT_BIBLE.md`; for build/dev notes see `CONTRIBUTING.md`; for history
+see `journal.md`.
 
 ---
 
 ## 0. The gate before any new feature: harden what v2 already shipped
 
 v2.0.0 roughly quadrupled the surface (Files repos, GitHub, diffs, blame,
-search, dashboard, deep links) in a single jump. The verification leaned on the
-build agent's self-report plus one live pass. **The biggest risk to the project
+search, dashboard, deep links) in a single jump. The verification leaned on an
+initial self-report plus one live pass. **The biggest risk to the project
 is not a missing feature — it's that the surface grew faster than its tests.**
 
 Before adding breadth, close this:

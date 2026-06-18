@@ -84,7 +84,7 @@ are served from `/custom_apps/.../js/`. This broke README rendering and silently
 dropped syntax highlighting to plain text. **curl/HTTP checks could not catch it
 — only a browser executing the code-split imports does.** Fixed by pinning
 `__webpack_public_path__ = generateFilePath('lantern','','js/')` in `src/main.js`
-(see CLAUDE.md HARD RULE 0). Re-verified green in the browser.
+(see CONTRIBUTING.md build gotcha 0). Re-verified green in the browser.
 
 ---
 
@@ -115,7 +115,7 @@ docker exec -u root nc-lantern bash -c "apt-get update -qq && apt-get install -y
 
 ### Load the latest app build into the container (redeploy)
 ```bash
-cd /Users/paul/Claude/Projects/lantern
+cd lantern                  # the dev working copy
 npm install                 # first time only
 npm run build               # emits js/lantern-main.js, js/lantern-admin.js + lazy chunks
 make release                # stages runtime-only files into build/release/lantern
@@ -196,8 +196,8 @@ didn't double-count; feature branches deleted):
 - **PR #4** 2.2.2 full-width fill + screenshots → `main`.
 
 `main` is at **2.2.2**; merge commits `f78c2a7` → `1a74e35` → `2cdfdef` →
-`ce3a4cc`. (`gh` isn't logged in here; pull the token from the git credential
-helper into `GH_TOKEN` for `gh` commands — see the `lantern-git-push-pr` memory.)
+`ce3a4cc`. (If `gh` isn't logged in locally, populate `GH_TOKEN` from the git
+credential helper for `gh` commands.)
 
 ### 2.0.1 — hardening (ROADMAP §0, "feature zero")
 - **Honest GitHub failure states.** Every non-2xx used to collapse into
