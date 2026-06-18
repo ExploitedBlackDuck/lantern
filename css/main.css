@@ -484,19 +484,19 @@
 .lantern-code .hljs-section { color: #8959a8; }
 .lantern-code .hljs-string,
 .lantern-code .hljs-attr,
-.lantern-code .hljs-meta-string { color: #718c00; }
+.lantern-code .hljs-meta-string { color: #5c7000; }
 .lantern-code .hljs-number,
 .lantern-code .hljs-symbol,
 .lantern-code .hljs-built_in,
-.lantern-code .hljs-type { color: #c18401; }
+.lantern-code .hljs-type { color: #8a5d00; }
 .lantern-code .hljs-title,
 .lantern-code .hljs-name,
-.lantern-code .hljs-function .hljs-title { color: #4271ae; }
+.lantern-code .hljs-function .hljs-title { color: #30588f; }
 .lantern-code .hljs-variable,
 .lantern-code .hljs-regexp,
 .lantern-code .hljs-tag { color: #c82829; }
 .lantern-code .hljs-meta { color: var(--color-text-maxcontrast); }
-.lantern-code .hljs-addition { color: #718c00; }
+.lantern-code .hljs-addition { color: #5c7000; }
 .lantern-code .hljs-deletion { color: #c82829; }
 
 @media (prefers-color-scheme: dark) {

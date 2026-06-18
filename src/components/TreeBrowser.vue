@@ -60,6 +60,11 @@ export default {
 			const i = this.path.lastIndexOf('/')
 			this.$emit('navigate', i === -1 ? '' : this.path.slice(0, i))
 		},
+		entryIcon(type) {
+			if (type === 'tree') return '📁'
+			if (type === 'commit') return '🔗' // submodule reference
+			return '📄'
+		},
 		humanSize(n) {
 			if (n === null || n === undefined) return ''
 			if (n < 1024) return n + ' B'
@@ -104,9 +109,10 @@ export default {
 					class="lantern-tree-row"
 					:class="{ 'is-open': entry.type === 'blob' && entry.path === openPath }"
 					:aria-current="entry.type === 'blob' && entry.path === openPath ? 'true' : 'false'"
+					:disabled="entry.type === 'commit'"
 					@click="onClick(entry)">
-					<span class="name">{{ entry.type === 'tree' ? '📁' : '📄' }} {{ entry.name }}</span>
-					<span class="size">{{ humanSize(entry.size) }}</span>
+					<span class="name">{{ entryIcon(entry.type) }} {{ entry.name }}</span>
+					<span class="size">{{ entry.type === 'commit' ? 'submodule' : humanSize(entry.size) }}</span>
 				</button>
 			</li>
 		</ul>

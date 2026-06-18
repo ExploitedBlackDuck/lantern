@@ -15,6 +15,7 @@ use OCA\Lantern\Model\RepoDescriptor;
 use OCA\Lantern\Model\SearchMatch;
 use OCA\Lantern\Model\TreeEntry;
 use OCA\Lantern\Provider\IRepoProvider;
+use OCA\Lantern\Provider\LfsPointer;
 
 /**
  * Read-only browser over a git repository that lives on the server's disk.
@@ -130,6 +131,14 @@ final class LocalGitProvider implements IRepoProvider {
 		}
 
 		$raw = $contentRes->stdout;
+
+		// A Git LFS pointer is a tiny text blob; render it as an LFS object rather
+		// than dumping the pointer text as if it were the file's content.
+		$lfs = LfsPointer::parse($raw);
+		if ($lfs !== null) {
+			return new BlobContent($path, $size, false, false, null, true, $lfs['oid'], $lfs['size']);
+		}
+
 		$binary = $this->looksBinary($raw);
 
 		return new BlobContent(

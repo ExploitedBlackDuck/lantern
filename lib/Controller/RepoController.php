@@ -18,6 +18,7 @@ use OCA\Lantern\Service\UserRepoStore;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\DataDisplayResponse;
 use OCP\AppFramework\Http\JSONResponse;
@@ -298,7 +299,12 @@ class RepoController extends Controller {
 	 * images are served inline (everything else, including SVG, downloads).
 	 */
 	#[NoAdminRequired]
+	#[NoCSRFRequired]
 	public function raw(string $repoId, string $path, string $ref = '', int $download = 0): DataDisplayResponse {
+		// NoCSRFRequired: this read-only GET serves file bytes to <img> tags and
+		// direct download links, which cannot carry a CSRF token. It is still
+		// session-authenticated and returns only data the user may already read;
+		// responses are nosniff + strict-CSP (see the controller's hardening).
 		try {
 			$repo = $this->resolveRepo($repoId);
 			$provider = $this->providers->forRepo($repo);

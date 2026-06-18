@@ -17,6 +17,7 @@ use OCA\Lantern\Model\RepoDescriptor;
 use OCA\Lantern\Model\SearchMatch;
 use OCA\Lantern\Model\TreeEntry;
 use OCA\Lantern\Provider\IRepoProvider;
+use OCA\Lantern\Provider\LfsPointer;
 use OCA\Lantern\Service\ForgeRepoStore;
 use OCP\Http\Client\IClientService;
 use OCP\IUserSession;
@@ -163,8 +164,16 @@ final class GitHubProvider implements IRepoProvider {
 	public static function mapTree(array $json): array {
 		$entries = [];
 		foreach ($json as $row) {
-			$type = ($row['type'] ?? '') === 'dir' ? TreeEntry::TYPE_TREE : TreeEntry::TYPE_BLOB;
-			$size = $type === TreeEntry::TYPE_TREE ? null : (int) ($row['size'] ?? 0);
+			$rawType = (string) ($row['type'] ?? '');
+			// GitHub's contents API reports a submodule as type "submodule" (the
+			// git/trees API uses "commit"); render either as a submodule reference,
+			// not a broken/empty folder.
+			$type = match ($rawType) {
+				'dir' => TreeEntry::TYPE_TREE,
+				'submodule', 'commit' => TreeEntry::TYPE_COMMIT,
+				default => TreeEntry::TYPE_BLOB,
+			};
+			$size = $type === TreeEntry::TYPE_BLOB ? (int) ($row['size'] ?? 0) : null;
 			$entries[] = new TreeEntry(
 				(string) ($row['name'] ?? ''),
 				(string) ($row['path'] ?? ''),
@@ -193,6 +202,10 @@ final class GitHubProvider implements IRepoProvider {
 		$raw = base64_decode(str_replace("\n", '', (string) $row['content']), true);
 		if ($raw === false) {
 			return new BlobContent($path, $size, false, true, null);
+		}
+		$lfs = LfsPointer::parse($raw);
+		if ($lfs !== null) {
+			return new BlobContent($path, $size, false, false, null, true, $lfs['oid'], $lfs['size']);
 		}
 		$binary = str_contains(substr($raw, 0, 8192), "\0");
 		return new BlobContent($path, $size, $binary, false, $binary ? null : $raw);

@@ -60,6 +60,81 @@ final class NullLogger implements \Psr\Log\LoggerInterface {
 	}
 }
 
+/** In-memory ICache for the caching-decorator test (see registry-stubs.php). */
+final class ArrayCache implements \OCP\ICache {
+	/** @var array<string,mixed> */
+	public array $store = [];
+	public function get($key) {
+		return $this->store[$key] ?? null;
+	}
+	public function set($key, $value, $ttl = 0): bool {
+		$this->store[$key] = $value;
+		return true;
+	}
+}
+
+/**
+ * IRepoProvider test double that counts how often each method actually runs, so
+ * a cache hit is observable as "inner not re-invoked". $blobLen sizes the blob
+ * body (to exercise the cache's size cap); $fail makes listTree throw (to prove
+ * errors are not cached).
+ */
+final class CountingProvider implements \OCA\Lantern\Provider\IRepoProvider {
+	/** @var array<string,int> */
+	public array $calls = [];
+	public int $blobLen = 3;
+	public bool $fail = false;
+	private function bump(string $m): void {
+		$this->calls[$m] = ($this->calls[$m] ?? 0) + 1;
+	}
+	public function getKey(): string {
+		return 'count';
+	}
+	public function defaultRef($repo): string {
+		$this->bump('defaultRef');
+		return 'master';
+	}
+	public function listTree($repo, $ref, $path): array {
+		$this->bump('listTree');
+		if ($this->fail) {
+			throw new RepoNotFoundException('boom');
+		}
+		return [new TreeEntry('a', 'a', 'blob', '100644', 'oid', 1)];
+	}
+	public function getBlob($repo, $ref, $path): \OCA\Lantern\Model\BlobContent {
+		$this->bump('getBlob');
+		return new \OCA\Lantern\Model\BlobContent($path, $this->blobLen, false, false, str_repeat('x', $this->blobLen));
+	}
+	public function listCommits($repo, $ref, $path, $limit, $offset = 0): array {
+		$this->bump('listCommits');
+		return [new \OCA\Lantern\Model\CommitInfo('h', 'A', 'a@x', '2026-01-01T00:00:00Z', 's')];
+	}
+	public function listRefs($repo): array {
+		$this->bump('listRefs');
+		return [new RefInfo('master', RefInfo::TYPE_BRANCH, true)];
+	}
+	public function getBlobRaw($repo, $ref, $path, $maxBytes): \OCA\Lantern\Model\RawBlob {
+		$this->bump('getBlobRaw');
+		return new \OCA\Lantern\Model\RawBlob($path, 3, 'xxx', false);
+	}
+	public function search($repo, $ref, $query, $limit): array {
+		$this->bump('search');
+		return [new SearchMatch('a', 1, 'x')];
+	}
+	public function getCommitDiff($repo, $ref): string {
+		$this->bump('getCommitDiff');
+		return 'diff --git';
+	}
+	public function getRangeDiff($repo, $baseRef, $headRef): string {
+		$this->bump('getRangeDiff');
+		return 'diff --git';
+	}
+	public function blame($repo, $ref, $path): array {
+		$this->bump('blame');
+		return [new \OCA\Lantern\Model\BlameLine(1, str_repeat('a', 40), 'A', '2026-01-01T00:00:00Z')];
+	}
+}
+
 $pass = 0;
 $fail = 0;
 $check = static function (string $label, bool $cond) use (&$pass, &$fail): void {
@@ -280,6 +355,46 @@ try {
 	destroyRepo($detachedPath);
 }
 
+// --- real-repo edge cases: LFS pointers + submodules (HARDENING §3) ---
+$specialPath = buildSpecialEntriesRepo();
+$special = new RepoDescriptor('special', 'Special', $specialPath, 'local');
+try {
+	$sref = $provider->defaultRef($special);
+	$stree = $provider->listTree($special, $sref, '');
+	$sub = array_values(array_filter($stree, static fn (TreeEntry $e) => $e->name === 'sub'))[0] ?? null;
+	$check('submodule listed as a commit-type entry (not a broken folder)',
+		$sub !== null && $sub->type === TreeEntry::TYPE_COMMIT);
+
+	$lfsBlob = $provider->getBlob($special, $sref, 'big.bin');
+	$check('LFS pointer flagged as lfs', $lfsBlob->lfs === true);
+	$check('LFS pointer text suppressed (not rendered as file content)', $lfsBlob->content === null);
+	$check('LFS pointer carries the declared real size', $lfsBlob->lfsSize === 1048576);
+	$check('LFS pointer carries the sha256 oid', \strlen((string) $lfsBlob->lfsOid) === 64);
+	$check('LFS pointer is not mis-flagged as binary', $lfsBlob->binary === false);
+	$check('LFS fields appear in the JSON contract',
+		json_decode((string) json_encode($lfsBlob), true)['lfs'] === true);
+
+	$normal = $provider->getBlob($special, $sref, 'README.md');
+	$check('a normal text file is NOT treated as LFS', $normal->lfs === false && $normal->content !== null);
+} finally {
+	destroyRepo($specialPath);
+}
+
+// --- Git LFS pointer detection (pure, no git) ---
+$LFS = \OCA\Lantern\Provider\LfsPointer::class;
+$ptr = "version https://git-lfs.github.com/spec/v1\noid sha256:" . str_repeat('a', 64) . "\nsize 12345\n";
+$lfsParsed = $LFS::parse($ptr);
+$check('LFS parse extracts oid + size',
+	\is_array($lfsParsed) && $lfsParsed['size'] === 12345 && \strlen($lfsParsed['oid']) === 64);
+$check('LFS parse rejects ordinary text', $LFS::parse("# hello\nworld\n") === null);
+$check('LFS parse rejects a version line with no oid/size',
+	$LFS::parse("version https://git-lfs.github.com/spec/v1\n") === null);
+$check('LFS parse rejects a non-hex oid',
+	$LFS::parse("version https://git-lfs.github.com/spec/v1\noid sha256:NOTHEX\nsize 5\n") === null);
+$check('LFS parse rejects oversized content (regular file that starts alike)',
+	$LFS::parse("version https://git-lfs.github.com/spec/v1\n" . str_repeat('x', 2000)) === null);
+$check('LFS isPointer predicate agrees', $LFS::isPointer($ptr) === true && $LFS::isPointer('plain') === false);
+
 // --- RepoRegistry (framework-coupled; tested via stubbed IAppConfig) ---
 $initBareRepo = static function (string $dir): void {
 	mkdir($dir, 0700, true);
@@ -438,6 +553,20 @@ $check('GH mapBlob with no content field -> truncated, no crash',
 $badB64 = $GH::mapBlob(['path' => 'p', 'size' => 4, 'encoding' => 'base64', 'content' => '!!!not base64!!!']);
 $check('GH mapBlob with undecodable base64 -> truncated', $badB64->truncated === true);
 
+// --- GitHub submodule + LFS handling (HARDENING §3) ---
+$ghSub = $GH::mapTree([
+	['name' => 'sub', 'path' => 'sub', 'type' => 'submodule', 'sha' => 's1'],
+	['name' => 'a.txt', 'path' => 'a.txt', 'type' => 'file', 'size' => 3, 'sha' => 'a1'],
+]);
+$ghSubEntry = array_values(array_filter($ghSub, static fn (TreeEntry $e) => $e->name === 'sub'))[0] ?? null;
+$check('GH mapTree maps a submodule to a commit-type entry',
+	$ghSubEntry !== null && $ghSubEntry->type === TreeEntry::TYPE_COMMIT && $ghSubEntry->size === null);
+$ghLfs = $GH::mapBlob(['path' => 'big.bin', 'size' => 130, 'encoding' => 'base64', 'content' => base64_encode($ptr)]);
+$check('GH mapBlob detects an LFS pointer (suppresses text, carries size)',
+	$ghLfs->lfs === true && $ghLfs->content === null && $ghLfs->lfsSize === 12345);
+$ghPlain = $GH::mapBlob(['path' => 'a.txt', 'size' => 5, 'encoding' => 'base64', 'content' => base64_encode('hello')]);
+$check('GH mapBlob leaves a normal file un-flagged', $ghPlain->lfs === false && $ghPlain->content === 'hello');
+
 // --- GitLabProvider pure mappers (fixture JSON, no network) ---
 $GL = \OCA\Lantern\Provider\Forge\GitLabProvider::class;
 
@@ -459,6 +588,18 @@ $glBlobBig = $GL::mapBlob(['file_path' => 'big', 'size' => 5_000_000, 'encoding'
 $check('GL mapBlob marks >1MiB truncated', $glBlobBig->truncated === true && $glBlobBig->content === null);
 $glBlobNoSize = $GL::mapBlob(['file_path' => 'c.txt', 'size' => 0, 'encoding' => 'base64', 'content' => base64_encode('hi')]);
 $check('GL mapBlob falls back to decoded length when size is 0', $glBlobNoSize->size === 2 && $glBlobNoSize->content === 'hi');
+
+// --- GitLab submodule + LFS handling (HARDENING §3) ---
+$glSub = $GL::mapTree([
+	['id' => 's1', 'name' => 'sub', 'type' => 'commit', 'path' => 'sub', 'mode' => '160000'],
+	['id' => 'a1', 'name' => 'a.txt', 'type' => 'blob', 'path' => 'a.txt', 'mode' => '100644'],
+]);
+$glSubEntry = array_values(array_filter($glSub, static fn (TreeEntry $e) => $e->name === 'sub'))[0] ?? null;
+$check('GL mapTree maps a submodule (type commit) to a commit-type entry',
+	$glSubEntry !== null && $glSubEntry->type === TreeEntry::TYPE_COMMIT);
+$glLfs = $GL::mapBlob(['file_path' => 'big.bin', 'size' => 130, 'encoding' => 'base64', 'content' => base64_encode($ptr)]);
+$check('GL mapBlob detects an LFS pointer (suppresses text, carries size)',
+	$glLfs->lfs === true && $glLfs->content === null && $glLfs->lfsSize === 12345);
 
 $glCommits = $GL::mapCommits([
 	['id' => 'deadbeef', 'title' => 'Fix bug', 'message' => "Fix bug\n\nbody", 'author_name' => 'Ann', 'author_email' => 'a@x', 'authored_date' => '2026-01-01T00:00:00Z'],
@@ -518,6 +659,55 @@ $check('GL mapCommits of [] is []', $GL::mapCommits([]) === []);
 $check('GL mapBlame tolerates missing commit/lines', \count($GL::mapBlame([['x' => 1], ['commit' => 'nope']])) === 0);
 $glBadCommit = $GL::mapCommits([['id' => 'x'], []]);
 $check('GL mapCommits tolerates missing fields', \count($glBadCommit) === 2 && $glBadCommit[0]->subject === '');
+
+// --- caching decorator (HARDENING §1) ---
+$cache = new ArrayCache();
+$counter = new CountingProvider();
+$cached = new \OCA\Lantern\Provider\Cache\CachingRepoProvider($counter, $cache);
+$crepo = new RepoDescriptor('c1', 'C', '/x', 'count');
+
+$t1 = $cached->listTree($crepo, 'master', '');
+$cached->listTree($crepo, 'master', '');
+$check('cache: identical listTree served from cache (inner ran once)', ($counter->calls['listTree'] ?? 0) === 1);
+$check('cache: cached value round-trips (same entry name)', $t1[0]->name === 'a');
+$cached->listTree($crepo, 'master', 'src');
+$check('cache: a different path is a distinct key (inner re-ran)', ($counter->calls['listTree'] ?? 0) === 2);
+$cached->listTree($crepo, 'dev', '');
+$check('cache: a different ref is a distinct key (inner re-ran)', ($counter->calls['listTree'] ?? 0) === 3);
+
+$b1 = $cached->getBlob($crepo, 'master', 'a.txt');
+$b2 = $cached->getBlob($crepo, 'master', 'a.txt');
+$check('cache: getBlob cached + content preserved', ($counter->calls['getBlob'] ?? 0) === 1 && $b2->content === $b1->content);
+
+// Per-user isolation is by cache prefix, but distinct repo IDs are also distinct
+// keys — one repo's cache never answers for another.
+$crepo2 = new RepoDescriptor('c2', 'C2', '/y', 'count');
+$cached->listRefs($crepo);
+$cached->listRefs($crepo);
+$cached->listRefs($crepo2);
+$check('cache: a different repo id is a distinct key', ($counter->calls['listRefs'] ?? 0) === 2);
+
+$cached->listCommits($crepo, 'master', null, 50, 0);
+$cached->listCommits($crepo, 'master', null, 50, 0);
+$cached->listCommits($crepo, 'master', null, 50, 10);
+$check('cache: listCommits keyed on pagination offset', ($counter->calls['listCommits'] ?? 0) === 2);
+
+$cached->getBlobRaw($crepo, 'master', 'a.txt', 1000);
+$cached->getBlobRaw($crepo, 'master', 'a.txt', 1000);
+$check('cache: getBlobRaw is pass-through (never cached)', ($counter->calls['getBlobRaw'] ?? 0) === 2);
+
+// Oversized blob bodies are computed but NOT cached (bounded memory).
+$counter->blobLen = \OCA\Lantern\Provider\Cache\CachingRepoProvider::MAX_CACHED_BLOB + 1;
+$cached->getBlob($crepo, 'master', 'big.txt');
+$cached->getBlob($crepo, 'master', 'big.txt');
+$check('cache: an oversized blob is not cached (inner re-ran)', ($counter->calls['getBlob'] ?? 0) === 3);
+
+// Errors are never cached: a throwing read is retried, not memoised.
+$counter->fail = true;
+$threw1 = $throws(static fn () => $cached->listTree($crepo, 'fail', ''));
+$threw2 = $throws(static fn () => $cached->listTree($crepo, 'fail', ''));
+$check('cache: a failed read is not cached (re-invoked, still throws)',
+	$threw1 && $threw2 && ($counter->calls['listTree'] ?? 0) === 5);
 
 echo "\n========================================\n";
 echo "RESULT: $pass passed, $fail failed\n";

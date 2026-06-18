@@ -51,6 +51,26 @@ make release                      # -> build/release/lantern.tar.gz (includes bu
 `js/` is gitignored on purpose: the **source repo** does not commit build
 output; the **release tarball** carries it. Don't force `js/` into git.
 
+## Translations (i18n)
+
+User-facing strings are translatable. PHP uses `$l->t()` / `$l->n()`; the front
+end uses `t('…')` / `n('…','…',count)` (helpers in `src/l10n.js`, bound to the
+`lantern` app id and registered on each Vue app in `src/main.js`/`src/admin.js`).
+
+- Extract the source template: `make l10n` → `translationfiles/templates/lantern.pot`
+  (requires GNU gettext; mirrors Nextcloud's official `translationtool.phar`).
+- **English is the source language** and ships without a catalog — `t()` returns
+  the source string when no catalog matches. Other locales compile to
+  `l10n/<lang>.js` + `l10n/<lang>.json`, which Nextcloud auto-loads; **no code
+  changes** are needed to add a locale. `make release`/`appstore` package `l10n/`.
+- **Remaining work:** `EmptyState.vue` is fully externalized as the reference
+  pattern. The other components (`App.vue`, `AdminApp.vue`, `BlobViewer.vue`,
+  `CommitList.vue`, `RepoList.vue`, `RefPicker.vue`, `ForgeRepoManager.vue`,
+  `MyReposManager.vue`, `GlobalSearchBox.vue`, `SearchBox.vue`, `TreeBrowser.vue`,
+  `ReadmeView.vue`) and the PHP settings/setup-check/dashboard strings still hold
+  inline English — wrap each in `t()` / `$l->t()` (mechanical; browser-verify
+  after, per the discipline above).
+
 ## Build gotchas / footguns (each of these actually bit — do not relearn)
 
 0. **Code-split (dynamic `import()`) chunks need an explicit

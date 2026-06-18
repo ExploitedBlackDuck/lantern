@@ -18,6 +18,7 @@ use OCA\Lantern\Model\RepoDescriptor;
 use OCA\Lantern\Model\SearchMatch;
 use OCA\Lantern\Model\TreeEntry;
 use OCA\Lantern\Provider\IRepoProvider;
+use OCA\Lantern\Provider\LfsPointer;
 use OCA\Lantern\Service\ForgeRepoStore;
 use OCP\Http\Client\IClientService;
 use OCP\IUserSession;
@@ -187,7 +188,13 @@ final class GitLabProvider implements IRepoProvider {
 	public static function mapTree(array $json): array {
 		$entries = [];
 		foreach ($json as $row) {
-			$type = ($row['type'] ?? '') === 'tree' ? TreeEntry::TYPE_TREE : TreeEntry::TYPE_BLOB;
+			// GitLab's tree endpoint reports a submodule as type "commit"; render
+			// it as a submodule reference, not a broken/empty folder.
+			$type = match ((string) ($row['type'] ?? '')) {
+				'tree' => TreeEntry::TYPE_TREE,
+				'commit' => TreeEntry::TYPE_COMMIT,
+				default => TreeEntry::TYPE_BLOB,
+			};
 			$entries[] = new TreeEntry(
 				(string) ($row['name'] ?? ''),
 				(string) ($row['path'] ?? ''),
@@ -220,6 +227,10 @@ final class GitLabProvider implements IRepoProvider {
 		// GitLab reports `size` as the base64 length for some endpoints; trust the
 		// decoded length for display so a small file is never mis-flagged.
 		$len = \strlen($raw);
+		$lfs = LfsPointer::parse($raw);
+		if ($lfs !== null) {
+			return new BlobContent($path, $size > 0 ? $size : $len, false, false, null, true, $lfs['oid'], $lfs['size']);
+		}
 		$binary = str_contains(substr($raw, 0, 8192), "\0");
 		return new BlobContent($path, $size > 0 ? $size : $len, $binary, false, $binary ? null : $raw);
 	}

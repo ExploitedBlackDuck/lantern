@@ -20,6 +20,16 @@ namespace OCP {
 	}
 }
 
+namespace OCP {
+	if (!interface_exists(ICache::class)) {
+		// Only the two methods CachingRepoProvider actually calls.
+		interface ICache {
+			public function get($key);
+			public function set($key, $value, $ttl = 0): bool;
+		}
+	}
+}
+
 namespace Psr\Log {
 	if (!interface_exists(LoggerInterface::class)) {
 		interface LoggerInterface {
