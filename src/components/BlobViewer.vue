@@ -109,7 +109,9 @@ export default {
 	},
 	computed: {
 		isImage() {
-			return IMAGE_EXT.includes(this.ext)
+			// An LFS-stored image's raw endpoint returns the pointer text, not the
+			// image bytes — don't try to render it as an <img>.
+			return IMAGE_EXT.includes(this.ext) && !this.blob?.lfs
 		},
 		ext() {
 			const dot = this.path.lastIndexOf('.')
@@ -260,7 +262,11 @@ export default {
 		</div>
 
 		<template v-else-if="blob">
-			<div v-if="blob.binary" class="lantern-binary">
+			<div v-if="blob.lfs" class="lantern-binary">
+				Stored with Git LFS ({{ blob.lfsSize }} bytes). Lantern references large
+				objects rather than fetching them — <a class="lantern-link" :href="downloadHref">download the pointer</a>.
+			</div>
+			<div v-else-if="blob.binary" class="lantern-binary">
 				Binary file ({{ blob.size }} bytes) — <a class="lantern-link" :href="downloadHref">download</a>.
 			</div>
 			<div v-else-if="blob.truncated" class="lantern-binary">

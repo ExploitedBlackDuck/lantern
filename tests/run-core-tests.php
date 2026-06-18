@@ -280,6 +280,46 @@ try {
 	destroyRepo($detachedPath);
 }
 
+// --- real-repo edge cases: LFS pointers + submodules (HARDENING §3) ---
+$specialPath = buildSpecialEntriesRepo();
+$special = new RepoDescriptor('special', 'Special', $specialPath, 'local');
+try {
+	$sref = $provider->defaultRef($special);
+	$stree = $provider->listTree($special, $sref, '');
+	$sub = array_values(array_filter($stree, static fn (TreeEntry $e) => $e->name === 'sub'))[0] ?? null;
+	$check('submodule listed as a commit-type entry (not a broken folder)',
+		$sub !== null && $sub->type === TreeEntry::TYPE_COMMIT);
+
+	$lfsBlob = $provider->getBlob($special, $sref, 'big.bin');
+	$check('LFS pointer flagged as lfs', $lfsBlob->lfs === true);
+	$check('LFS pointer text suppressed (not rendered as file content)', $lfsBlob->content === null);
+	$check('LFS pointer carries the declared real size', $lfsBlob->lfsSize === 1048576);
+	$check('LFS pointer carries the sha256 oid', \strlen((string) $lfsBlob->lfsOid) === 64);
+	$check('LFS pointer is not mis-flagged as binary', $lfsBlob->binary === false);
+	$check('LFS fields appear in the JSON contract',
+		json_decode((string) json_encode($lfsBlob), true)['lfs'] === true);
+
+	$normal = $provider->getBlob($special, $sref, 'README.md');
+	$check('a normal text file is NOT treated as LFS', $normal->lfs === false && $normal->content !== null);
+} finally {
+	destroyRepo($specialPath);
+}
+
+// --- Git LFS pointer detection (pure, no git) ---
+$LFS = \OCA\Lantern\Provider\LfsPointer::class;
+$ptr = "version https://git-lfs.github.com/spec/v1\noid sha256:" . str_repeat('a', 64) . "\nsize 12345\n";
+$lfsParsed = $LFS::parse($ptr);
+$check('LFS parse extracts oid + size',
+	\is_array($lfsParsed) && $lfsParsed['size'] === 12345 && \strlen($lfsParsed['oid']) === 64);
+$check('LFS parse rejects ordinary text', $LFS::parse("# hello\nworld\n") === null);
+$check('LFS parse rejects a version line with no oid/size',
+	$LFS::parse("version https://git-lfs.github.com/spec/v1\n") === null);
+$check('LFS parse rejects a non-hex oid',
+	$LFS::parse("version https://git-lfs.github.com/spec/v1\noid sha256:NOTHEX\nsize 5\n") === null);
+$check('LFS parse rejects oversized content (regular file that starts alike)',
+	$LFS::parse("version https://git-lfs.github.com/spec/v1\n" . str_repeat('x', 2000)) === null);
+$check('LFS isPointer predicate agrees', $LFS::isPointer($ptr) === true && $LFS::isPointer('plain') === false);
+
 // --- RepoRegistry (framework-coupled; tested via stubbed IAppConfig) ---
 $initBareRepo = static function (string $dir): void {
 	mkdir($dir, 0700, true);
@@ -438,6 +478,20 @@ $check('GH mapBlob with no content field -> truncated, no crash',
 $badB64 = $GH::mapBlob(['path' => 'p', 'size' => 4, 'encoding' => 'base64', 'content' => '!!!not base64!!!']);
 $check('GH mapBlob with undecodable base64 -> truncated', $badB64->truncated === true);
 
+// --- GitHub submodule + LFS handling (HARDENING §3) ---
+$ghSub = $GH::mapTree([
+	['name' => 'sub', 'path' => 'sub', 'type' => 'submodule', 'sha' => 's1'],
+	['name' => 'a.txt', 'path' => 'a.txt', 'type' => 'file', 'size' => 3, 'sha' => 'a1'],
+]);
+$ghSubEntry = array_values(array_filter($ghSub, static fn (TreeEntry $e) => $e->name === 'sub'))[0] ?? null;
+$check('GH mapTree maps a submodule to a commit-type entry',
+	$ghSubEntry !== null && $ghSubEntry->type === TreeEntry::TYPE_COMMIT && $ghSubEntry->size === null);
+$ghLfs = $GH::mapBlob(['path' => 'big.bin', 'size' => 130, 'encoding' => 'base64', 'content' => base64_encode($ptr)]);
+$check('GH mapBlob detects an LFS pointer (suppresses text, carries size)',
+	$ghLfs->lfs === true && $ghLfs->content === null && $ghLfs->lfsSize === 12345);
+$ghPlain = $GH::mapBlob(['path' => 'a.txt', 'size' => 5, 'encoding' => 'base64', 'content' => base64_encode('hello')]);
+$check('GH mapBlob leaves a normal file un-flagged', $ghPlain->lfs === false && $ghPlain->content === 'hello');
+
 // --- GitLabProvider pure mappers (fixture JSON, no network) ---
 $GL = \OCA\Lantern\Provider\Forge\GitLabProvider::class;
 
@@ -459,6 +513,18 @@ $glBlobBig = $GL::mapBlob(['file_path' => 'big', 'size' => 5_000_000, 'encoding'
 $check('GL mapBlob marks >1MiB truncated', $glBlobBig->truncated === true && $glBlobBig->content === null);
 $glBlobNoSize = $GL::mapBlob(['file_path' => 'c.txt', 'size' => 0, 'encoding' => 'base64', 'content' => base64_encode('hi')]);
 $check('GL mapBlob falls back to decoded length when size is 0', $glBlobNoSize->size === 2 && $glBlobNoSize->content === 'hi');
+
+// --- GitLab submodule + LFS handling (HARDENING §3) ---
+$glSub = $GL::mapTree([
+	['id' => 's1', 'name' => 'sub', 'type' => 'commit', 'path' => 'sub', 'mode' => '160000'],
+	['id' => 'a1', 'name' => 'a.txt', 'type' => 'blob', 'path' => 'a.txt', 'mode' => '100644'],
+]);
+$glSubEntry = array_values(array_filter($glSub, static fn (TreeEntry $e) => $e->name === 'sub'))[0] ?? null;
+$check('GL mapTree maps a submodule (type commit) to a commit-type entry',
+	$glSubEntry !== null && $glSubEntry->type === TreeEntry::TYPE_COMMIT);
+$glLfs = $GL::mapBlob(['file_path' => 'big.bin', 'size' => 130, 'encoding' => 'base64', 'content' => base64_encode($ptr)]);
+$check('GL mapBlob detects an LFS pointer (suppresses text, carries size)',
+	$glLfs->lfs === true && $glLfs->content === null && $glLfs->lfsSize === 12345);
 
 $glCommits = $GL::mapCommits([
 	['id' => 'deadbeef', 'title' => 'Fix bug', 'message' => "Fix bug\n\nbody", 'author_name' => 'Ann', 'author_email' => 'a@x', 'authored_date' => '2026-01-01T00:00:00Z'],

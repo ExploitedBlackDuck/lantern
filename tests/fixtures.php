@@ -94,6 +94,43 @@ function buildMaliciousDiffRepo(string $sentinel): string {
 	return $dir;
 }
 
+/**
+ * A repo exercising real-repo edge cases that break on strangers' repositories
+ * (HARDENING §3): a Git LFS pointer file (must be labelled, not rendered as its
+ * pointer text) and a submodule gitlink (a `commit`-type tree entry, mode
+ * 160000, that must render as a submodule reference rather than a broken folder).
+ *
+ * The submodule is injected straight into the index with `update-index
+ * --cacheinfo`, which needs no actual submodule checkout (and no network): git
+ * does not verify the referenced commit exists, so HEAD's own sha stands in.
+ */
+function buildSpecialEntriesRepo(): string {
+	$dir = sys_get_temp_dir() . '/lantern-special-' . bin2hex(random_bytes(4));
+	mkdir($dir, 0700, true);
+	$run = static function (string $cmd) use ($dir): void {
+		exec('cd ' . escapeshellarg($dir) . ' && ' . $cmd . ' 2>/dev/null');
+	};
+	$run('git init -q');
+	$run('git symbolic-ref HEAD refs/heads/master');
+	$run('git config user.email t@e.st');
+	$run('git config user.name Tester');
+	file_put_contents($dir . '/README.md', "# special\n");
+	// A Git LFS pointer: a tiny text blob standing in for a 1 MiB object.
+	$oid = str_repeat('ab', 32); // 64 hex chars
+	file_put_contents(
+		$dir . '/big.bin',
+		"version https://git-lfs.github.com/spec/v1\noid sha256:$oid\nsize 1048576\n",
+	);
+	$run('git add -A && git commit -qm "readme + lfs pointer"');
+	// Inject a submodule gitlink (mode 160000) referencing HEAD's own commit.
+	$head = trim((string) shell_exec('cd ' . escapeshellarg($dir) . ' && git rev-parse HEAD 2>/dev/null'));
+	if ($head !== '') {
+		$run('git update-index --add --cacheinfo 160000,' . $head . ',sub');
+		$run('git commit -qm "add submodule gitlink"');
+	}
+	return $dir;
+}
+
 function buildEmptyRepo(): string {
 	$dir = sys_get_temp_dir() . '/lantern-empty-' . bin2hex(random_bytes(4));
 	mkdir($dir, 0700, true);
