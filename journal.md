@@ -1,13 +1,15 @@
 # Lantern — Development Journal
 
-**As of 2026-06-15 · App version 2.2.2**
+**As of 2026-06-19 · App version 2.3.0**
 
-A running record of the 1.0.6 → 2.2.2 build: what was done, how it was verified,
+A running record of the 1.0.6 → 2.3.0 build: what was done, how it was verified,
 the local test environment, and what's left. For the durable design-of-record
-see `docs/PROJECT_BIBLE.md`; for the full change history see `CHANGELOG.md`.
+see `docs/PROJECT_BIBLE.md`; for the full change history see `CHANGELOG.md`; for
+build gotchas and the live-test recipe see `CONTRIBUTING.md`.
 
-> **2.0.1 → 2.2.2 (post-2.0 work) is summarised in §7 at the bottom;** §§1–6
-> describe the 2.0.0 build and remain accurate except where §7 supersedes them.
+> **2.0.1 → 2.2.2 (post-2.0 work) is summarised in §7;** the **2.3.0 hardening
+> pass is in §8 at the bottom** (current state — trust it most). §§1–6 describe
+> the 2.0.0 build and remain accurate except where §7/§8 supersede them.
 
 ---
 
@@ -293,3 +295,108 @@ GitLab as a source.
   GitLab pickers).
 - GitHub blame (GraphQL); per-user sharing; **App-Store submission** (tag/sign/
   submit — screenshots are now ready and hosted, so this is unblocked).
+
+---
+
+## 8. Hardening pass (2.3.0) — current state
+
+2.3.0 makes ROADMAP §0/§2 concrete: turn a tool that runs on one instance into
+an app strangers can install. **No new sources or write capability** — robustness,
+scale, and submission mechanics only. Every item below was **live-verified on a
+throwaway Nextcloud 34 container** (see §8.5) in addition to offline tests.
+
+### 8.1 Real-repo edge cases (the things that break on strangers' repos)
+- **Git LFS pointers.** New pure detector `lib/Provider/LfsPointer.php` recognises
+  the pointer format (`version https://git-lfs…` + `oid sha256:` + `size`). The
+  Local, GitHub, and GitLab blob paths now suppress the pointer text and mark the
+  blob as LFS (`BlobContent` gained `lfs` / `lfsOid` / `lfsSize`). `BlobViewer`
+  shows a "Stored with Git LFS" notice and no longer tries to render an
+  LFS-backed image from its pointer bytes.
+- **Submodules.** A `commit`-type tree entry maps to `TreeEntry::TYPE_COMMIT` in
+  the forge providers (the local provider already passed it through); the file
+  tree renders it as a submodule reference (disabled row), not a broken folder.
+- **Bug the live pass caught that offline tests could not:** the `raw` download
+  endpoint lacked `#[NoCSRFRequired]`, so `<img>` tags and download links got a
+  `412` — image preview and binary download were broken. Fixed (it is a
+  read-only, session-authenticated GET; nosniff + strict CSP already applied).
+  *Lesson reaffirmed: browser-test the frontend; HARD RULE 0 territory.*
+
+### 8.2 Caching (correctness + cost at scale)
+`lib/Provider/Cache/CachingRepoProvider.php` decorates every `IRepoProvider` and
+memoises the expensive reads (tree/blob/commits/refs/diff/blame/search) in NC's
+`ICache` (`ICacheFactory::createDistributed`, which **no-ops safely without
+Redis/APCu**). Wired in `Application::register`. **Keys are namespaced per user**
+because forge/user-Files repo ids are per-user and the distributed cache is
+shared — a global key would leak one user's private repo content to another. TTLs
+are short (refs move); raw byte streams pass through uncached; oversized blob
+bodies/diffs and **errors are never cached** (a failed read throws, so only
+successes reach the cache).
+
+### 8.3 Internationalization (translation-ready; ships English)
+- `src/l10n.js` exposes `t()` / `n()` bound to the `lantern` app id (via
+  `@nextcloud/l10n`), registered on both Vue apps (`main.js`, `admin.js`) so
+  templates call `t('…')` directly.
+- **All** front-end components and the user-facing PHP (`$l->t()` in the setup
+  check, dashboard widget, search provider, admin section) are externalized.
+- `make l10n` extracts PHP + front-end strings into
+  `translationfiles/templates/lantern.pot` (mirrors NC's `translationtool.phar`).
+  English is the source language and needs no catalog; other locales drop into
+  `l10n/<lang>.{js,json}` with **no code changes**. `make release`/`appstore`
+  package `l10n/`.
+
+### 8.4 Accessibility (WCAG AA in light *and* dark)
+The syntax-highlight palette used to brighten via `@media (prefers-color-scheme:
+dark)`, which follows the **OS** — but NC's dark theme is a per-user **app**
+setting, so a user on NC-dark + light-OS got light-tuned token colors on a dark
+background (axe measured 2.0–2.6:1). Reworked into theme-switchable CSS custom
+properties keyed off NC's own theme attributes (`data-theme-dark` /
+`data-theme-default` + `prefers-color-scheme`), so a forced NC theme wins and all
+values clear AA. **axe reports 0 critical/serious on the tree and file views in
+both themes.** Manual residual: keyboard-only walkthrough + screen-reader smoke.
+
+### 8.5 Verification (cumulative)
+- **Offline suite: 144 → 173 assertions**, all green (`php tests/run-core-tests.php`)
+  — adds LFS-pointer detection (pure + Local/forge), submodule mapping, and the
+  caching decorator (a counting fake proves hits/misses, the size cap, and the
+  no-cache-on-error contract).
+- **Live on NC 34:** LFS/submodule end-to-end **13/13** (`tests/live-verify-lfs.cjs`),
+  axe **0 critical/serious** in light and dark (`tests/a11y-scan.cjs`) — both are
+  **network-gated helpers, not in the offline suite**. Zero console errors, zero
+  `/apps/lantern` 4xx/5xx throughout.
+
+### 8.6 Local test environment (current)
+Container **`nc-lantern`** (NC 34.0.0, sqlite) on **http://localhost:8099**,
+admin **`admin` / `admin_pass_123`**, running the **2.3.0 release tarball**
+(installed via `occ upgrade`, not a dev mount). Two demo repos under `/srv/git`:
+- **`demo-app`** — README + Python/JS sources, three commits (diffs/blame), a
+  `feature/widgets` branch and `v1.0.0` tag (ref picker), and the word `needle`
+  in two files (cross-repo search).
+- **`lfsdemo`** — `big.png` (LFS pointer), `real.png` (real image),
+  `vendored-lib` (submodule gitlink) — exercises §8.1.
+Bring-up recipe and gotchas are in `CONTRIBUTING.md` (note the version-bump →
+`occ upgrade` cache-buster rule). Tear down: `docker rm -f nc-lantern`.
+
+### 8.7 App-Store submission — status & next steps (continuity)
+Four-file version sync done (info.xml/package.json/CHANGELOG/PROJECT_BIBLE);
+`info.xml` validates against the live schema; the three screenshot URLs resolve.
+
+- **Stage 1 (GitHub release): DONE.** `v2.3.0` tagged with a clean
+  `lantern.tar.gz` asset (also the public download URL the store fetches).
+- **Signing keypair: DONE.** `~/.nextcloud/certificates/lantern.{key,csr}`,
+  `CN=lantern`. **`lantern.key` is secret — keep it out of git and back it up;**
+  losing it voids any issued certificate. See `SIGNING.md`.
+- **Certificate request: PREPARED, not yet submitted.** The CSR is staged for a
+  PR to `nextcloud/app-certificate-requests` (path `lantern/lantern.csr`).
+  **Blocked on a precondition:** the GitHub profile needs a public email before
+  the request will be processed. Once set, open the PR; Nextcloud's team reviews
+  and issues `lantern.crt` (days).
+- **Then (needs the cert + a Nextcloud account):** `occ integrity:sign-app`
+  (writes `appinfo/signature.json`) → repackage → recompute the release
+  signature → upload via the "Submit your app" form / REST API on
+  apps.nextcloud.com. The app id **`lantern`** is confirmed available.
+
+### 8.8 Remaining follow-ups (carry-over + new)
+- Everything still open from §7 (private GitLab-with-token path; forge ref
+  pagination beyond 100; GitHub blame via GraphQL; per-user sharing).
+- Manual a11y residual (§8.4): keyboard-only walkthrough + screen-reader smoke.
+- The App-Store steps gated in §8.7.
